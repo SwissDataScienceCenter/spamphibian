@@ -1,12 +1,12 @@
-import argparse
 from sanic import Sanic
 from sanic.response import json as sanic_json
 from sanic.worker.loader import AppLoader
 import redis
 import json
+from functools import partial
 
-def create_app():
-    app = Sanic("EventListener")
+def create_app(app_name: str) -> Sanic:
+    app = Sanic(app_name)
 
     # Create Redis connection
     redis_conn = redis.Redis(host='localhost', port=6379, db=0)
@@ -34,26 +34,34 @@ def create_app():
         # Issue-related events
         elif object_kind == 'issue' and action in ['open', 'close', 'reopen', 'update']:
             queue_name = f'issue_{action}'
+
+        # Note-related events
+        elif object_kind == 'note':
+            try:
+                # Check if 'note' exists in 'object_attributes'
+                noteable_type = gitlab_event['object_attributes']['noteable_type']
+                # Check if 'noteable_type' is 'Issue'
+                if noteable_type == 'Issue':
+                    if gitlab_event['object_attributes']['created_at'] == gitlab_event['object_attributes']['updated_at']:
+                        queue_name = f'issue_note_create'
+                    else:
+                        queue_name = f'issue_note_update'
+
+            except KeyError:
+                print("object_attributes.note does not exist in gitlab_event")
+
         
         else:
             print(f'Unhandled event: {event_name if event_name else object_kind}')
         
-        await redis_conn.lpush(queue_name, json.dumps(gitlab_event))
+        redis_conn.lpush(queue_name, json.dumps(gitlab_event))
 
         return sanic_json({"message": "Event received"})
 
     return app
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(prog="EventListener")
-    parser.add_argument("-H", "--host", default="0.0.0.0", help="Host to listen on")
-    parser.add_argument("-p", "--port", default=8000, type=int, help="Port to listen on")
-    parser.add_argument("--debug", action="store_true", help="Enable Sanic debug mode")
-    parser.add_argument("--fast", action="store_true", help="Enable Sanic fast mode")
-    parser.add_argument("-d", "--dev", action="store_true", help="Enable Sanic development mode")
-    parser.add_argument("--single-process", action="store_true", help="Do not use multiprocessing.")
-    args = vars(parser.parse_args())
-    loader = AppLoader(factory=create_app)
+    loader = AppLoader(factory=partial(create_app, "EventService"))
     app = loader.load()
-    app.prepare(**args)
+    app.prepare(port=8000, dev=True)
     Sanic.serve(primary=app, app_loader=loader)
