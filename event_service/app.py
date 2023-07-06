@@ -42,6 +42,7 @@ def create_app(app_name: str) -> Sanic:
                 noteable_type = gitlab_event['object_attributes']['noteable_type']
                 # Check if 'noteable_type' is 'Issue'
                 if noteable_type == 'Issue':
+                    # Check if 'created_at' and 'updated_at' are equal, meaning the note was just created
                     if gitlab_event['object_attributes']['created_at'] == gitlab_event['object_attributes']['updated_at']:
                         queue_name = f'issue_note_create'
                     else:
@@ -53,6 +54,8 @@ def create_app(app_name: str) -> Sanic:
         
         else:
             print(f'Unhandled event: {event_name if event_name else object_kind}')
+
+        queue_name = "event_" + queue_name
         
         redis_conn.lpush(queue_name, json.dumps(gitlab_event))
 
