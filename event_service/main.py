@@ -10,10 +10,11 @@ def create_app(app_name: str) -> Sanic:
     app = Sanic(app_name)
 
     # Create Redis connection
-    redis_conn = redis.Redis(host="localhost", port=6379, db=0)
+    redis_conn = redis.StrictRedis(host="localhost", port=6379, db=0)
 
     @app.post("/event")
     async def handle_event(request):
+        queue_name = ""
         gitlab_event = request.json
 
         # Determine the type of event

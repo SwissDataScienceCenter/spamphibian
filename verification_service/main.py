@@ -1,18 +1,34 @@
+import logging
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
 import json
 import redis
 from time import sleep
 import yaml
 import re
 import requests
+import os
 
 
-def check_domain_verification(email):
+def check_domain_verification(email, verified_domains_file):
     # Load verified domains from yaml file
-    with open("verification_service/verified_domains.yaml", "r") as file:
+    with open(verified_domains_file, "r") as file:
         verified_domains = yaml.safe_load(file)["domains"]
 
     for domain in verified_domains:
         if re.search(domain, email):
+            return True
+    return False
+
+
+def check_user_verification(email, verified_users_file):
+    # Load verified users from yaml file
+    with open(verified_users_file, "r") as file:
+        verified_users = yaml.safe_load(file)["users"]
+
+    for verified_user in verified_users:
+        if verified_user == email:
             return True
     return False
 
@@ -40,9 +56,12 @@ def get_user_email_address(event_type, event_data):
         return None
 
 
-def process_events():
-    # Set up Redis connection
-    redis_conn = redis.Redis(host="localhost", port=6379, db=0)
+def process_events(verified_users_file, verified_domains_file):
+    # Get GitLab URL and access token from environment variables
+    GITLAB_URL = os.getenv("GITLAB_URL")
+    GITLAB_ACCESS_TOKEN = os.environ.get("GITLAB_ACCESS_TOKEN")
+
+    redis_conn = redis.StrictRedis(host="localhost", port=6379, db=0)
 
     # List of event types to listen for
     event_types = [
@@ -70,6 +89,8 @@ def process_events():
             # If there was no event, continue to the next event type
             if event is None:
                 continue
+
+            logging.info(f"Processing event {event_type}")
 
             # Parse the event data from JSON
             event_data = json.loads(event)
@@ -100,8 +121,8 @@ def process_events():
                 group_id = event_data.get("id")
 
                 response = requests.get(
-                    f"https://gitlab.example.com/api/v4/groups/{group_id}/members",
-                    headers={"PRIVATE-TOKEN": "<your_access_token>"},
+                    f"{GITLAB_URL}/api/v4/groups/{group_id}/members",
+                    headers={"PRIVATE-TOKEN": f"{GITLAB_ACCESS_TOKEN}"},
                 )
                 group_members = response.json()
 
@@ -116,21 +137,27 @@ def process_events():
                 print(
                     f"Unable to get user email address for this event type: {event_type}"
                 )
-            else:
-                domain_verified = check_domain_verification(user_email_address)
+                continue
+
+            user_verified = check_domain_verification(user_email_address, verified_domains_file)
+            print(
+                f"User email address {user_email_address} domain verification status: {user_verified}"
+            )
+            if not user_verified:
+                user_verified = check_user_verification(user_email_address, verified_users_file)
                 print(
-                    f"User email address {user_email_address} verification status: {domain_verified}"
+                    f"User email address {user_email_address} user verification status: {user_verified}"
                 )
 
-                if domain_verified:
-                    continue
+            if user_verified:
+                continue
 
-                queue_name = "verification_" + event_type
-                redis_conn.lpush(queue_name, json.dumps(event_data))
+            queue_name = "verification_" + event_type
+            redis_conn.lpush(queue_name, json.dumps(event_data))
 
         # Sleep for a bit before checking the queues again
         sleep(1)
 
 
 if __name__ == "__main__":
-    process_events()
+    process_events(verified_domains_file="verification_service/verified_domains.yaml", verified_users_file="verification_service/verified_users.yaml")
