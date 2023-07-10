@@ -1,7 +1,7 @@
 import logging
 
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
 import json
@@ -54,7 +54,9 @@ def get_user_email_address(event_type, event_data):
         return user_attributes.get("email")
 
     else:
-        print(f"Unable to get user email address for this event type: {event_type}")
+        logging.debug(
+            f"Unable to get user email address for this event type: {event_type}"
+        )
         return None
 
 
@@ -97,6 +99,8 @@ def process_events(
 
             user_email_address = None
 
+            user_verified = False
+
             # Perform an action based on the event type
             if event_type in [
                 "project_create",
@@ -114,7 +118,7 @@ def process_events(
                 user_email_address = get_user_email_address(event_type, event_data)
 
             elif event_type in ["group_create", "group_rename"]:
-                print(
+                logging.info(
                     f"{event_type} event type received, need to get user email from GitLab API"
                 )
 
@@ -128,12 +132,12 @@ def process_events(
                 try:
                     group_members = response.json()
                 except ValueError:
-                    print("Failed to decode JSON from response")
+                    logging.debug("Failed to decode JSON from response")
                     return
 
                 # Check that group_members is a list
                 if not isinstance(group_members, list):
-                    print("Unexpected response from server")
+                    logging.debug("Unexpected response from server")
                     return
 
                 for member in group_members:
@@ -141,26 +145,30 @@ def process_events(
                         user_email_address = member.get("email")
                         break
 
-            ## add snippet_check event type
-
-            if user_email_address is None:
-                print(
+            if user_email_address is None and event_type is not "snippet_check":
+                logging.debug(
                     f"Unable to get user email address for this event type: {event_type}"
                 )
                 continue
-
-            user_verified = check_domain_verification(
-                user_email_address, verified_domains_file
-            )
-            print(
-                f"User email address {user_email_address} domain verification status: {user_verified}"
-            )
-            if not user_verified:
-                user_verified = check_user_verification(
-                    user_email_address, verified_users_file
+            elif user_email_address is not None and event_type is not "snippet_check":
+                user_verified = check_domain_verification(
+                    user_email_address, verified_domains_file
                 )
-                print(
-                    f"User email address {user_email_address} user verification status: {user_verified}"
+
+                logging.info(
+                    f"User email address {user_email_address} domain verification status: {user_verified}"
+                )
+
+                if not user_verified:
+                    user_verified = check_user_verification(
+                        user_email_address, verified_users_file
+                    )
+                    logging.info(
+                        f"User email address {user_email_address} user verification status: {user_verified}"
+                    )
+            elif event_type is not "snippet_check":
+                logging.info(
+                    f"Snippet check event type received, individual snippet verification will be done at a later point by the GitLab Item Retrieval Service. Passing event to the next queue."
                 )
 
             if user_verified:

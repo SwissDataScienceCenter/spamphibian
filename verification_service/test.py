@@ -100,8 +100,9 @@ class TestVerificationService(unittest.TestCase):
             "issue_note_create",
             "group_create",
             "group_rename",
+            "snippet_check",
         ]
-        email_replacements = ["js@blbla.gov", "js@gitlabhq.com"]
+        email_replacements = ["user@verified-domain.gov", "verified-user@non-verified-domain.com"]
         mock_api_responses = {}
         test_cases = []
         json_data = {}
@@ -109,7 +110,11 @@ class TestVerificationService(unittest.TestCase):
         with open(f"test_json_data/group_members_response.json", "r") as file:
             group_members_response = json.load(file)
 
-        for event_type in event_types:
+        webhook_event_types = [
+            event_type for event_type in event_types if event_type != "snippet_check"
+        ]
+
+        for event_type in webhook_event_types:
             # load json data from file
             with open(f"test_json_data/{event_type}.json", "r") as file:
                 data = json.load(file)
@@ -143,13 +148,13 @@ class TestVerificationService(unittest.TestCase):
 
                     patched_data = copy.deepcopy(group_members_response)
                     patched_data[1]["email"] = patched_data[1]["email"].replace(
-                        "js@blbla.com", "js@blbla.gov"
+                        "non-verified-user@non-verified-domain.com", "user@verified-domain.gov"
                     )
                     mock_api_responses["event_group_create_2"] = patched_data
 
                     patched_data = copy.deepcopy(patched_data)  # Make a new deep copy
                     patched_data[1]["email"] = patched_data[1]["email"].replace(
-                        "js@blbla.gov", "js@gitlabhq.com"
+                        "user@verified-domain.gov", "verified-user@non-verified-domain.com"
                     )
                     mock_api_responses["event_group_create_3"] = patched_data
 
@@ -170,13 +175,13 @@ class TestVerificationService(unittest.TestCase):
 
                 patched_data = copy.deepcopy(group_members_response)
                 patched_data[1]["email"] = patched_data[1]["email"].replace(
-                    "js@blbla.com", "js@blbla.gov"
+                    "non-verified-user@non-verified-domain.com", "user@verified-domain.gov"
                 )
                 mock_api_responses["event_group_rename_6"] = patched_data
 
                 patched_data = copy.deepcopy(patched_data)
                 patched_data[1]["email"] = patched_data[1]["email"].replace(
-                    "js@blbla.gov", "js@gitlabhq.com"
+                    "user@verified-domain.gov", "verified-user@non-verified-domain.com"
                 )
                 mock_api_responses["event_group_rename_7"] = patched_data
 
@@ -185,12 +190,31 @@ class TestVerificationService(unittest.TestCase):
                     test_cases.append(
                         (
                             f"event_{event_type}",
-                            json_data[event_type].replace("js@blbla.com", replacement),
+                            json_data[event_type].replace(
+                                "non-verified-user@non-verified-domain.com", replacement
+                            ),
                             f"verification_{event_type}",
                             False,
                         )
                     )
 
+        # Test case for snippet check
+
+        # load json data from file
+        with open(f"test_json_data/snippet_check.json", "r") as file:
+            data = json.load(file)
+        json_data["snippet_check"] = json.dumps(data)
+
+        test_cases.append(
+            (
+                f"event_snippet_check",
+                json_data["snippet_check"],
+                f"verification_snippet_check",
+                True,
+            )
+        )
+
+        # Set up mock API responses for group members queries
         group_id_to_key = {
             1: "event_group_create_1",
             2: "event_group_create_2",

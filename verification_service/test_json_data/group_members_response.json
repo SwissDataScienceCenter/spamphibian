@@ -37,7 +37,7 @@
       },
       "expires_at": "2012-10-22T14:13:35Z",
       "access_level": 50,
-      "email": "js@blbla.com",
+      "email": "non-verified-user@non-verified-domain.com",
       "group_saml_identity": {
         "extern_uid":"ABC-1234567890",
         "provider": "group_saml",

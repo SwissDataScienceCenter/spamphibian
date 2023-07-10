@@ -3,12 +3,12 @@
     "updated_at": "2012-07-21T07:38:22Z",
     "event_name": "project_create",
     "name": "StoreCloud",
-    "owner_email": "js@blbla.com",
+    "owner_email": "non-verified-user@non-verified-domain.com",
     "owner_name": "John Smith",
     "owners": [
         {
             "name": "John",
-            "email": "js@blbla.com"
+            "email": "non-verified-user@non-verified-domain.com"
         }
     ],
     "path": "storecloud",

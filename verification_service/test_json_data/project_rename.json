@@ -7,11 +7,11 @@
     "path_with_namespace": "jsmith/underscore",
     "project_id": 73,
     "owner_name": "John Smith",
-    "owner_email": "js@blbla.com",
+    "owner_email": "non-verified-user@non-verified-domain.com",
     "owners": [
         {
             "name": "John",
-            "email": "js@blbla.com"
+            "email": "non-verified-user@non-verified-domain.com"
         }
     ],
     "project_visibility": "internal",
