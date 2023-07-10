@@ -1,6 +1,8 @@
 import logging
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 import json
 import redis
@@ -56,11 +58,9 @@ def get_user_email_address(event_type, event_data):
         return None
 
 
-def process_events(verified_users_file, verified_domains_file):
-    # Get GitLab URL and access token from environment variables
-    GITLAB_URL = os.getenv("GITLAB_URL")
-    GITLAB_ACCESS_TOKEN = os.environ.get("GITLAB_ACCESS_TOKEN")
-
+def process_events(
+    verified_users_file, verified_domains_file, gitlab_url, gitlab_access_token
+):
     redis_conn = redis.StrictRedis(host="localhost", port=6379, db=0)
 
     # List of event types to listen for
@@ -118,13 +118,23 @@ def process_events(verified_users_file, verified_domains_file):
                     f"{event_type} event type received, need to get user email from GitLab API"
                 )
 
-                group_id = event_data.get("id")
+                group_id = event_data.get("group_id")
 
                 response = requests.get(
-                    f"{GITLAB_URL}/api/v4/groups/{group_id}/members",
-                    headers={"PRIVATE-TOKEN": f"{GITLAB_ACCESS_TOKEN}"},
+                    f"{gitlab_url}/api/v4/groups/{group_id}/members/all",
+                    headers={"PRIVATE-TOKEN": f"{gitlab_access_token}"},
                 )
-                group_members = response.json()
+
+                try:
+                    group_members = response.json()
+                except ValueError:
+                    print("Failed to decode JSON from response")
+                    return
+
+                # Check that group_members is a list
+                if not isinstance(group_members, list):
+                    print("Unexpected response from server")
+                    return
 
                 for member in group_members:
                     if member.get("access_level") == 50:
@@ -139,12 +149,16 @@ def process_events(verified_users_file, verified_domains_file):
                 )
                 continue
 
-            user_verified = check_domain_verification(user_email_address, verified_domains_file)
+            user_verified = check_domain_verification(
+                user_email_address, verified_domains_file
+            )
             print(
                 f"User email address {user_email_address} domain verification status: {user_verified}"
             )
             if not user_verified:
-                user_verified = check_user_verification(user_email_address, verified_users_file)
+                user_verified = check_user_verification(
+                    user_email_address, verified_users_file
+                )
                 print(
                     f"User email address {user_email_address} user verification status: {user_verified}"
                 )
@@ -160,4 +174,9 @@ def process_events(verified_users_file, verified_domains_file):
 
 
 if __name__ == "__main__":
-    process_events(verified_domains_file="verification_service/verified_domains.yaml", verified_users_file="verification_service/verified_users.yaml")
+    process_events(
+        verified_domains_file="verification_service/verified_domains.yaml",
+        verified_users_file="verification_service/verified_users.yaml",
+        gitlab_url=os.getenv("GITLAB_URL"),
+        gitlab_access_token=os.environ.get("GITLAB_ACCESS_TOKEN"),
+    )
