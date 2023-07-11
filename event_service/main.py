@@ -10,6 +10,7 @@ logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
+
 def create_app(app_name: str) -> Sanic:
     app = Sanic(app_name)
 
@@ -65,7 +66,9 @@ def create_app(app_name: str) -> Sanic:
                 logging.debug("object_attributes.note does not exist in gitlab_event")
 
         else:
-            logging.debug(f"Unhandled event: {event_name if event_name else object_kind}")
+            logging.debug(
+                f"Unhandled event: {event_name if event_name else object_kind}"
+            )
 
         queue_name = "event_" + queue_name
 

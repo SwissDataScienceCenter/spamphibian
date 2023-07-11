@@ -2,8 +2,14 @@ import unittest
 import json
 from unittest.mock import patch
 from sanic_testing import TestManager
+import logging
+
+logging.basicConfig(
+    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 from main import create_app
+
 
 class MockRedis:
     def __init__(self, cache=dict()):
@@ -50,12 +56,6 @@ class MockRedis:
             return self.cache[key].pop(0)
         else:
             return None
-    
-    def lpeek(self, key):
-        if key in self.cache and isinstance(self.cache[key], list) and len(self.cache[key]) > 0:
-            return self.cache[key][0]
-        else:
-            return None
 
     def exists(self, key):
         if key in self.cache:
@@ -65,35 +65,80 @@ class MockRedis:
     def cache_overwrite(self, cache=dict()):
         self.cache = cache
 
-class TestEventService(unittest.TestCase):
 
+class TestEventService(unittest.TestCase):
     def setUp(self):
         self.redis_mock = MockRedis()
-        self.redis_class_patch = patch("redis.StrictRedis", return_value=self.redis_mock, autospec=True)
+        self.redis_class_patch = patch(
+            "redis.StrictRedis", return_value=self.redis_mock, autospec=True
+        )
         self.mock_redis_class = self.redis_class_patch.start()
-        self.app = create_app('TestApp')
+        self.app = create_app("TestApp")
         self.test_manager = TestManager(self.app)
 
     def tearDown(self):
         # Stop patches
         self.redis_class_patch.stop()
 
-    def test_handle_event_project_create(self):
-        # load json data from file
-        with open(f"../test_json_data/project_create.json", "r") as file:
-            event = json.load(file)
+    def test_handle_event_types(self):
+        json_data = {}
+        test_cases = []
 
-        self.mock_redis_class.return_value = self.redis_mock
+        event_types = [
+            "project_create",
+            "project_rename",
+            "project_transfer",
+            "user_create",
+            "user_rename",
+            "issue_open",
+            "issue_reopen",
+            "issue_update",
+            "issue_close",
+            "issue_note_create",
+            "group_create",
+            "group_rename",
+            "snippet_check",
+        ]
 
-        request, response = self.test_manager.test_client.post('/event', data=json.dumps(event))
+        for event_type in event_types:
+            # load json data from file
+            with open(f"../test_json_data/{event_type}.json", "r") as file:
+                data = json.load(file)
+            json_data[event_type] = json.dumps(data)
 
-        self.assertEqual(response.status, 200)
-        self.assertDictEqual(response.json, {'message': 'Event received'})
+            test_cases.append(
+                (
+                    event_type,
+                    json_data[event_type],
+                    f"event_{event_type}",
+                )
+            )
 
-        output_value = self.redis_mock.get('event_project_create')
-        print(f"Output value: {output_value}")
-        self.assertIsNotNone(output_value)
-        self.assertIn(json.dumps(event), output_value)
+        for (
+            input_event_type,
+            event_data,
+            output_event_type,
+        ) in test_cases:
+            with self.subTest(
+                input_event_type=input_event_type,
+                event_data=event_data,
+                output_event_type=output_event_type,
+            ):
+                self.mock_redis_class.return_value = self.redis_mock
 
-if __name__ == '__main__':
+                logging.info(f"Testing event type: {input_event_type}")
+
+                request, response = self.test_manager.test_client.post(
+                    "/event", data=event_data
+                )
+
+                self.assertEqual(response.status, 200)
+                self.assertDictEqual(response.json, {"message": "Event received"})
+
+                output_value = self.redis_mock.get(output_event_type)
+                self.assertIsNotNone(output_value)
+                self.assertIn(event_data, output_value)
+
+
+if __name__ == "__main__":
     unittest.main()
