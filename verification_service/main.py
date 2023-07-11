@@ -12,6 +12,37 @@ import re
 import requests
 import os
 
+project_events = [
+    "project_create",
+    "project_rename",
+    "project_transfer",
+]
+
+user_events = [
+    "user_create",
+    "user_rename",
+]
+
+issue_events = [
+    "issue_open",
+    "issue_update",
+    "issue_close",
+    "issue_reopen",
+]
+
+issue_note_events = [
+    "issue_note_create",
+    "issue_note_update",
+]
+
+group_events = [
+    "group_create",
+    "group_rename",
+]
+
+snippet_events = [
+    "snippet_check",
+]
 
 def check_domain_verification(email, verified_domains_file):
     # Load verified domains from yaml file
@@ -36,20 +67,13 @@ def check_user_verification(email, verified_users_file):
 
 
 def get_user_email_address(event_type, event_data):
-    if event_type in ["project_create", "project_rename", "project_transfer"]:
+    if event_type in project_events:
         return event_data.get("owner_email")
 
-    elif event_type in ["user_create", "user_rename"]:
+    elif event_type in user_events:
         return event_data.get("email")
 
-    elif event_type in [
-        "issue_open",
-        "issue_update",
-        "issue_close",
-        "issue_reopen",
-        "issue_note_create",
-        "issue_note_update",
-    ]:
+    elif event_type in issue_events + issue_note_events:
         user_attributes = event_data.get("user", {})
         return user_attributes.get("email")
 
@@ -66,22 +90,7 @@ def process_events(
     redis_conn = redis.StrictRedis(host="localhost", port=6379, db=0)
 
     # List of event types to listen for
-    event_types = [
-        "project_create",
-        "project_rename",
-        "project_transfer",
-        "issue_open",
-        "issue_close",
-        "issue_reopen",
-        "issue_update",
-        "user_create",
-        "user_rename",
-        "group_create",
-        "group_rename",
-        "snippet_check",
-        "issue_note_update",
-        "issue_note_create",
-    ]
+    event_types = user_events + project_events + issue_events + issue_note_events + group_events + snippet_events
 
     while True:
         for event_type in event_types:
@@ -102,22 +111,10 @@ def process_events(
             user_verified = False
 
             # Perform an action based on the event type
-            if event_type in [
-                "project_create",
-                "project_rename",
-                "project_transfer",
-                "user_create",
-                "user_rename",
-                "issue_open",
-                "issue_update",
-                "issue_close",
-                "issue_reopen",
-                "issue_note_create",
-                "issue_note_update",
-            ]:
+            if event_type in project_events + user_events + issue_events + issue_note_events:
                 user_email_address = get_user_email_address(event_type, event_data)
 
-            elif event_type in ["group_create", "group_rename"]:
+            elif event_type in group_events:
                 logging.info(
                     f"{event_type} event type received, need to get user email from GitLab API"
                 )
@@ -145,12 +142,12 @@ def process_events(
                         user_email_address = member.get("email")
                         break
 
-            if user_email_address is None and event_type is not "snippet_check":
+            if user_email_address is None and event_type != "snippet_check":
                 logging.debug(
                     f"Unable to get user email address for this event type: {event_type}"
                 )
                 continue
-            elif user_email_address is not None and event_type is not "snippet_check":
+            elif user_email_address is not None and event_type != "snippet_check":
                 user_verified = check_domain_verification(
                     user_email_address, verified_domains_file
                 )
@@ -166,7 +163,7 @@ def process_events(
                     logging.info(
                         f"User email address {user_email_address} user verification status: {user_verified}"
                     )
-            elif event_type is not "snippet_check":
+            elif event_type != "snippet_check":
                 logging.info(
                     f"Snippet check event type received, individual snippet verification will be done at a later point by the GitLab Item Retrieval Service. Passing event to the next queue."
                 )

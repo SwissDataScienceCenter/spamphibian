@@ -1,11 +1,11 @@
 import unittest
 from unittest.mock import patch
 import json
-from main import process_events
 from time import sleep
 import responses
 import copy
 
+from main import process_events
 
 class MockRedis:
     def __init__(self, cache=dict()):
@@ -63,6 +63,7 @@ class MockRedis:
 
 
 class TestVerificationService(unittest.TestCase):
+
     def setUp(self):
         self.redis_mock = MockRedis()
         self.redis_class_patch = patch("redis.StrictRedis", autospec=True)
@@ -107,7 +108,7 @@ class TestVerificationService(unittest.TestCase):
         test_cases = []
         json_data = {}
 
-        with open(f"test_json_data/group_members_response.json", "r") as file:
+        with open(f"../test_json_data/group_members_response.json", "r") as file:
             group_members_response = json.load(file)
 
         webhook_event_types = [
@@ -116,7 +117,7 @@ class TestVerificationService(unittest.TestCase):
 
         for event_type in webhook_event_types:
             # load json data from file
-            with open(f"test_json_data/{event_type}.json", "r") as file:
+            with open(f"../test_json_data/{event_type}.json", "r") as file:
                 data = json.load(file)
             json_data[event_type] = json.dumps(data)
 
@@ -201,7 +202,7 @@ class TestVerificationService(unittest.TestCase):
         # Test case for snippet check
 
         # load json data from file
-        with open(f"test_json_data/snippet_check.json", "r") as file:
+        with open(f"../test_json_data/snippet_check.json", "r") as file:
             data = json.load(file)
         json_data["snippet_check"] = json.dumps(data)
 

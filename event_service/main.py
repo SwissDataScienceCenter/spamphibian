@@ -4,7 +4,11 @@ from sanic.worker.loader import AppLoader
 import redis
 import json
 from functools import partial
+import logging
 
+logging.basicConfig(
+    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 def create_app(app_name: str) -> Sanic:
     app = Sanic(app_name)
@@ -21,6 +25,8 @@ def create_app(app_name: str) -> Sanic:
         event_name = gitlab_event.get("event_name")
         object_kind = gitlab_event.get("object_kind")
         action = gitlab_event.get("object_attributes", {}).get("action")
+
+        logging.debug(f"Received event: {event_name}")
 
         # Project-related events
         if event_name in [
@@ -56,14 +62,18 @@ def create_app(app_name: str) -> Sanic:
                         queue_name = f"issue_note_update"
 
             except KeyError:
-                print("object_attributes.note does not exist in gitlab_event")
+                logging.debug("object_attributes.note does not exist in gitlab_event")
 
         else:
-            print(f"Unhandled event: {event_name if event_name else object_kind}")
+            logging.debug(f"Unhandled event: {event_name if event_name else object_kind}")
 
         queue_name = "event_" + queue_name
 
-        redis_conn.lpush(queue_name, json.dumps(gitlab_event))
+        try:
+            redis_conn.lpush(queue_name, json.dumps(gitlab_event))
+            logging.debug(f"Pushed event to queue: {queue_name}")
+        except Exception as e:
+            logging.error(f"Error pushing event to queue {queue_name}: {e}")
 
         return sanic_json({"message": "Event received"})
 
