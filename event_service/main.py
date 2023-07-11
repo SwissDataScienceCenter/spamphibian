@@ -1,24 +1,55 @@
 from sanic import Sanic
 from sanic.response import json as sanic_json
+from sanic.response import HTTPResponse
 from sanic.worker.loader import AppLoader
 import redis
 import json
 from functools import partial
 import logging
+from prometheus_client import generate_latest, multiprocess, CollectorRegistry, Counter
+import os
 
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
+prometheus_multiproc_dir = "prometheus_multiproc_dir"
+
+if not os.path.exists(prometheus_multiproc_dir):
+    os.makedirs(prometheus_multiproc_dir)
+
+os.environ["prometheus_multiproc_dir"] = prometheus_multiproc_dir
 
 def create_app(app_name: str) -> Sanic:
     app = Sanic(app_name)
 
+    requests_counter = Counter(
+        "requests", "The number of times my API was accessed", ["method", "endpoint"]
+    )
+    event_types_counter = Counter(
+        "event_type", "The number of times an event_type was received", ["event_type"]
+    )
+
     # Create Redis connection
     redis_conn = redis.StrictRedis(host="localhost", port=6379, db=0)
 
+    @app.route("/metrics")
+    async def get_metrics(request):
+        registry = CollectorRegistry()
+        multiprocess.MultiProcessCollector(registry)
+        metrics = generate_latest(registry)
+        return HTTPResponse(
+            metrics,
+            headers={"Content-Type": "text/plain; version=0.0.4; charset=utf-8"},
+        )
+
+    @app.before_server_stop
+    async def cleanup_metrics(app, _):
+        multiprocess.mark_process_dead(os.getpid())
+
     @app.post("/event")
     async def handle_event(request):
+        requests_counter.labels("POST", "/event").inc()
         queue_name = ""
         gitlab_event = request.json
 
@@ -69,6 +100,8 @@ def create_app(app_name: str) -> Sanic:
             logging.debug(
                 f"Unhandled event: {event_name if event_name else object_kind}"
             )
+
+        event_types_counter.labels(queue_name).inc()
 
         queue_name = "event_" + queue_name
 
