@@ -65,6 +65,13 @@ class MockRedis:
     def cache_overwrite(self, cache=dict()):
         self.cache = cache
 
+    def llen(self, key):
+        # Simulate the LLEN command in Redis
+        if key in self.cache and isinstance(self.cache[key], list):
+            return len(self.cache[key])
+        else:
+            return 0
+
 
 class TestEventService(unittest.TestCase):
     def setUp(self):

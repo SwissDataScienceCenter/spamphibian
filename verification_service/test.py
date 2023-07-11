@@ -7,6 +7,7 @@ import copy
 
 from main import process_events
 
+
 class MockRedis:
     def __init__(self, cache=dict()):
         self.cache = cache
@@ -61,9 +62,15 @@ class MockRedis:
     def cache_overwrite(self, cache=dict()):
         self.cache = cache
 
+    def llen(self, key):
+        # Simulate the LLEN command in Redis
+        if key in self.cache and isinstance(self.cache[key], list):
+            return len(self.cache[key])
+        else:
+            return 0
+
 
 class TestVerificationService(unittest.TestCase):
-
     def setUp(self):
         self.redis_mock = MockRedis()
         self.redis_class_patch = patch("redis.StrictRedis", autospec=True)
@@ -103,7 +110,10 @@ class TestVerificationService(unittest.TestCase):
             "group_rename",
             "snippet_check",
         ]
-        email_replacements = ["user@verified-domain.gov", "verified-user@non-verified-domain.com"]
+        email_replacements = [
+            "user@verified-domain.gov",
+            "verified-user@non-verified-domain.com",
+        ]
         mock_api_responses = {}
         test_cases = []
         json_data = {}
@@ -149,13 +159,15 @@ class TestVerificationService(unittest.TestCase):
 
                     patched_data = copy.deepcopy(group_members_response)
                     patched_data[1]["email"] = patched_data[1]["email"].replace(
-                        "non-verified-user@non-verified-domain.com", "user@verified-domain.gov"
+                        "non-verified-user@non-verified-domain.com",
+                        "user@verified-domain.gov",
                     )
                     mock_api_responses["event_group_create_2"] = patched_data
 
                     patched_data = copy.deepcopy(patched_data)  # Make a new deep copy
                     patched_data[1]["email"] = patched_data[1]["email"].replace(
-                        "user@verified-domain.gov", "verified-user@non-verified-domain.com"
+                        "user@verified-domain.gov",
+                        "verified-user@non-verified-domain.com",
                     )
                     mock_api_responses["event_group_create_3"] = patched_data
 
@@ -176,7 +188,8 @@ class TestVerificationService(unittest.TestCase):
 
                 patched_data = copy.deepcopy(group_members_response)
                 patched_data[1]["email"] = patched_data[1]["email"].replace(
-                    "non-verified-user@non-verified-domain.com", "user@verified-domain.gov"
+                    "non-verified-user@non-verified-domain.com",
+                    "user@verified-domain.gov",
                 )
                 mock_api_responses["event_group_rename_6"] = patched_data
 

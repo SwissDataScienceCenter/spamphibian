@@ -20,6 +20,7 @@ if not os.path.exists(prometheus_multiproc_dir):
 
 os.environ["prometheus_multiproc_dir"] = prometheus_multiproc_dir
 
+
 def create_app(app_name: str) -> Sanic:
     app = Sanic(app_name)
 

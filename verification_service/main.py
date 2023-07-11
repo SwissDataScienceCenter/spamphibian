@@ -1,16 +1,16 @@
 import logging
+import os
+import re
+import json
+import redis
+import requests
+import yaml
+from time import sleep
+from prometheus_client import start_http_server, Counter, Gauge
 
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
 )
-
-import json
-import redis
-from time import sleep
-import yaml
-import re
-import requests
-import os
 
 project_events = [
     "project_create",
@@ -44,8 +44,17 @@ snippet_events = [
     "snippet_check",
 ]
 
+# Define Prometheus metrics
+processed_events_total = Counter(
+    "processed_events_total", "Total number of processed events"
+)
+verified_events_total = Counter(
+    "verified_events_total", "Total number of verified events"
+)
+queue_length = Gauge("queue_length", "Current number of events in the queue")
+
+
 def check_domain_verification(email, verified_domains_file):
-    # Load verified domains from yaml file
     with open(verified_domains_file, "r") as file:
         verified_domains = yaml.safe_load(file)["domains"]
 
@@ -56,7 +65,6 @@ def check_domain_verification(email, verified_domains_file):
 
 
 def check_user_verification(email, verified_users_file):
-    # Load verified users from yaml file
     with open(verified_users_file, "r") as file:
         verified_users = yaml.safe_load(file)["users"]
 
@@ -89,29 +97,36 @@ def process_events(
 ):
     redis_conn = redis.StrictRedis(host="localhost", port=6379, db=0)
 
-    # List of event types to listen for
-    event_types = user_events + project_events + issue_events + issue_note_events + group_events + snippet_events
+    event_types = (
+        user_events
+        + project_events
+        + issue_events
+        + issue_note_events
+        + group_events
+        + snippet_events
+    )
 
     while True:
         for event_type in event_types:
-            # Pop the next event off the queue
             event = redis_conn.lpop("event_" + event_type)
 
-            # If there was no event, continue to the next event type
             if event is None:
                 continue
 
             logging.info(f"Processing event {event_type}")
 
-            # Parse the event data from JSON
+            processed_events_total.inc()  # Increment the processed events counter
+
             event_data = json.loads(event)
 
             user_email_address = None
 
             user_verified = False
 
-            # Perform an action based on the event type
-            if event_type in project_events + user_events + issue_events + issue_note_events:
+            if (
+                event_type
+                in project_events + user_events + issue_events + issue_note_events
+            ):
                 user_email_address = get_user_email_address(event_type, event_data)
 
             elif event_type in group_events:
@@ -132,7 +147,6 @@ def process_events(
                     logging.debug("Failed to decode JSON from response")
                     return
 
-                # Check that group_members is a list
                 if not isinstance(group_members, list):
                     logging.debug("Unexpected response from server")
                     return
@@ -163,25 +177,34 @@ def process_events(
                     logging.info(
                         f"User email address {user_email_address} user verification status: {user_verified}"
                     )
+
             elif event_type != "snippet_check":
                 logging.info(
                     f"Snippet check event type received, individual snippet verification will be done at a later point by the GitLab Item Retrieval Service. Passing event to the next queue."
                 )
 
             if user_verified:
+                verified_events_total.inc()  # Increment the verified events counter
                 continue
 
             queue_name = "verification_" + event_type
             redis_conn.lpush(queue_name, json.dumps(event_data))
 
-        # Sleep for a bit before checking the queues again
+        # Update the queue length gauge
+        queue_length.set(redis_conn.llen("event_" + event_type))
+
         sleep(1)
 
 
 if __name__ == "__main__":
+    # Start the metrics server
+    start_http_server(8001)
+
     process_events(
         verified_domains_file="verification_service/verified_domains.yaml",
         verified_users_file="verification_service/verified_users.yaml",
+        # verified_domains_file="verified_domains.yaml",
+        # verified_users_file="verified_users.yaml",
         gitlab_url=os.getenv("GITLAB_URL"),
         gitlab_access_token=os.environ.get("GITLAB_ACCESS_TOKEN"),
     )
