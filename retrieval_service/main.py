@@ -42,8 +42,9 @@ snippet_events = [
 ]
 
 
-def retrieve_gitlab_objects(GITLAB_URL, GITLAB_ACCESS_TOKEN):
-    redis_conn = redis.Redis(host="localhost", port=6379, db=0)
+def retrieve_gitlab_objects(GITLAB_URL, GITLAB_ACCESS_TOKEN, redis_conn=None, testing=False):
+    if redis_conn is None:
+        redis_conn = redis.Redis(host="localhost", port=6379, db=0)
 
     # Create a GitLab instance
     gl = gitlab.Gitlab(GITLAB_URL, private_token=GITLAB_ACCESS_TOKEN)
@@ -62,7 +63,10 @@ def retrieve_gitlab_objects(GITLAB_URL, GITLAB_ACCESS_TOKEN):
             event = redis_conn.lpop("verification_" + event_type)
 
             if event is None:
+                if testing:
+                    return
                 continue
+
 
             logging.info(f"Retrieval service: processing event {event_type}")
 
@@ -148,7 +152,7 @@ def retrieve_gitlab_objects(GITLAB_URL, GITLAB_ACCESS_TOKEN):
             queue_name = "retrieval_" + event_type
 
             try:
-                redis_conn.lpush(queue_name, json.dumps(gitlab_object.to_json()))
+                redis_conn.lpush(queue_name, gitlab_object.to_json())
                 logging.debug(f"Retrieval service: pushed event to queue: {queue_name}")
             except Exception as e:
                 logging.error(
