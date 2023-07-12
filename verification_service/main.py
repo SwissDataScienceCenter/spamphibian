@@ -6,7 +6,10 @@ import redis
 import requests
 import yaml
 from time import sleep
-from prometheus_client import start_http_server, Counter, Gauge
+from prometheus_client import Counter, Gauge, make_wsgi_app
+from flask import Flask, request, jsonify
+from prometheus_flask_exporter import PrometheusMetrics
+from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -52,6 +55,39 @@ verified_events_total = Counter(
     "verified_events_total", "Total number of verified events"
 )
 queue_length = Gauge("queue_length", "Current number of events in the queue")
+
+app = Flask(__name__)
+metrics = PrometheusMetrics(app)
+CONTENT_TYPE_LATEST = str("text/plain; version=0.0.4; charset=utf-8")
+
+
+@app.route("/verify_email", methods=["POST"])
+def verify_email():
+    data = request.get_json()
+    email = data.get("email")
+    if not email:
+        return jsonify({"error": "Missing email"}), 400
+
+    logging.debug(f"Request received on /verify_email for email: {email}")
+
+    domain_verified = check_domain_verification(email, "verified_domains.yaml")
+    user_verified = check_user_verification(email, "verified_users.yaml")
+
+    logging.debug(
+        f"{email} Domain verification status: {domain_verified}, user verification status: {user_verified}"
+    )
+
+    return jsonify(
+        {
+            "email": email,
+            "domain_verified": domain_verified,
+            "user_verified": user_verified,
+        }
+    )
+
+
+# Add prometheus wsgi middleware to route /metrics requests
+app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {"/metrics": make_wsgi_app()})
 
 
 def check_domain_verification(email, verified_domains_file):
@@ -115,7 +151,7 @@ def process_events(
 
             logging.info(f"Processing event {event_type}")
 
-            processed_events_total.inc()  # Increment the processed events counter
+            processed_events_total.inc()
 
             event_data = json.loads(event)
 
@@ -184,27 +220,28 @@ def process_events(
                 )
 
             if user_verified:
-                verified_events_total.inc()  # Increment the verified events counter
+                verified_events_total.inc()
                 continue
 
             queue_name = "verification_" + event_type
             redis_conn.lpush(queue_name, json.dumps(event_data))
 
-        # Update the queue length gauge
         queue_length.set(redis_conn.llen("event_" + event_type))
 
         sleep(1)
 
 
 if __name__ == "__main__":
-    # Start the metrics server
-    start_http_server(8001)
+    # Start the Flask server in a separate thread
+    from threading import Thread
+
+    Thread(target=app.run, kwargs={"port": 5002}).start()
 
     process_events(
-        verified_domains_file="verification_service/verified_domains.yaml",
-        verified_users_file="verification_service/verified_users.yaml",
-        # verified_domains_file="verified_domains.yaml",
-        # verified_users_file="verified_users.yaml",
+        # verified_domains_file="verification_service/verified_domains.yaml",
+        # verified_users_file="verification_service/verified_users.yaml",
+        verified_domains_file="verified_domains.yaml",
+        verified_users_file="verified_users.yaml",
         gitlab_url=os.getenv("GITLAB_URL"),
         gitlab_access_token=os.environ.get("GITLAB_ACCESS_TOKEN"),
     )

@@ -5,7 +5,7 @@ from time import sleep
 import responses
 import copy
 
-from main import process_events
+from main import process_events, app
 
 
 class MockRedis:
@@ -282,6 +282,46 @@ class TestVerificationService(unittest.TestCase):
                 else:
                     if output_value is not None:
                         self.assertNotIn(event_data, output_value)
+
+
+class TestEmailVerificationAPI(unittest.TestCase):
+    def setUp(self):
+        self.app = app
+        self.client = self.app.test_client()
+
+    def test_email_verification_api(self):
+        test_cases = [
+            ("verified-user@non-verified-domain.com", False, True),
+            ("user@verified-domain.gov", True, False),
+            ("non-verified-user@non-verified-domain.com", False, False),
+        ]
+
+        for (
+            email_address,
+            domain_verified,
+            user_verified,
+        ) in test_cases:
+            with self.subTest(
+                email_address=email_address,
+                domain_verified=domain_verified,
+                user_verified=user_verified,
+            ):
+                response = self.client.post(
+                    "/verify_email",
+                    json={"email": email_address},
+                    follow_redirects=True,
+                )
+                self.assertEqual(response.status_code, 200)
+                json_data = response.get_json()
+
+                # check if response is as expected
+                self.assertEqual(json_data.get("email"), email_address)
+                self.assertEqual(json_data.get("domain_verified"), domain_verified)
+                self.assertEqual(json_data.get("user_verified"), user_verified)
+
+    def test_metrics_endpoint(self):
+        response = self.client.get("/metrics", follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
 
 
 if __name__ == "__main__":
