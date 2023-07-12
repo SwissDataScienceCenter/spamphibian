@@ -15,11 +15,13 @@ if __name__ == "__main__":
         target=run_script, args=("verification_service/main.py",)
     )
     retrieval_service = Process(target=run_script, args=("retrieval_service/main.py",))
+    notification_service = Process(target=run_script, args=("notification_service/main.py",))
 
     # Start processes
     event_service.start()
     verification_service.start()
     retrieval_service.start()
+    notification_service.start()
 
     try:
         while True:
@@ -29,3 +31,4 @@ if __name__ == "__main__":
         os.kill(event_service.pid, signal.SIGINT)
         os.kill(verification_service.pid, signal.SIGINT)
         os.kill(retrieval_service.pid, signal.SIGINT)
+        os.kill(notification_service.pid, signal.SIGINT)
