@@ -42,11 +42,11 @@ snippet_events = [
 ]
 
 
-def retrieve_gitlab_objects(GITLAB_URL, GITLAB_PRIVATE_TOKEN):
+def retrieve_gitlab_objects(GITLAB_URL, GITLAB_ACCESS_TOKEN):
     redis_conn = redis.Redis(host="localhost", port=6379, db=0)
 
     # Create a GitLab instance
-    gl = gitlab.Gitlab(GITLAB_URL, private_token=GITLAB_PRIVATE_TOKEN)
+    gl = gitlab.Gitlab(GITLAB_URL, private_token=GITLAB_ACCESS_TOKEN)
 
     event_types = (
         user_events
@@ -160,6 +160,6 @@ def retrieve_gitlab_objects(GITLAB_URL, GITLAB_PRIVATE_TOKEN):
 
 if __name__ == "__main__":
     retrieve_gitlab_objects(
-        gitlab_url=os.getenv("GITLAB_URL"),
-        gitlab_access_token=os.environ.get("GITLAB_ACCESS_TOKEN"),
+        GITLAB_URL=os.getenv("GITLAB_URL"),
+        GITLAB_ACCESS_TOKEN=os.environ.get("GITLAB_ACCESS_TOKEN"),
     )
