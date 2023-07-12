@@ -149,7 +149,7 @@ def process_events(
             if event is None:
                 continue
 
-            logging.info(f"Processing event {event_type}")
+            logging.info(f"Verification service: processing event {event_type}")
 
             processed_events_total.inc()
 
@@ -167,9 +167,11 @@ def process_events(
 
             elif event_type in group_events:
                 logging.info(
-                    f"{event_type} event type received, need to get user email from GitLab API"
+                    f"Verification service: {event_type} event type received, need to get user email from GitLab API"
                 )
 
+                max_access_level = 0
+                user_id_with_max_access = None
                 group_id = event_data.get("group_id")
 
                 response = requests.get(
@@ -180,21 +182,41 @@ def process_events(
                 try:
                     group_members = response.json()
                 except ValueError:
-                    logging.debug("Failed to decode JSON from response")
+                    logging.debug(
+                        "Verification service: failed to decode JSON from response"
+                    )
                     return
 
                 if not isinstance(group_members, list):
-                    logging.debug("Unexpected response from server")
+                    logging.debug(
+                        "Verification service: unexpected response from server"
+                    )
                     return
 
+                logging.debug(f"Verification service: group members: {group_members}")
+
                 for member in group_members:
-                    if member.get("access_level") == 50:
+                    access_level = member.get("access_level")
+                    logging.debug(
+                        f"Verification service: access level: {access_level} for user: {member.get('email')}"
+                    )
+                    if access_level > max_access_level:
+                        max_access_level = access_level
+                        user_id_with_max_access = member.get("id")
                         user_email_address = member.get("email")
-                        break
+
+                # If no email address was found in the group_members list, get it from GitLab.
+                if not user_email_address and user_id_with_max_access is not None:
+                    response = requests.get(
+                        f"{gitlab_url}/api/v4/users/{user_id_with_max_access}",
+                        headers={"PRIVATE-TOKEN": f"{gitlab_access_token}"},
+                    )
+                    user = response.json()
+                    user_email_address = user.get("email")
 
             if user_email_address is None and event_type != "snippet_check":
                 logging.debug(
-                    f"Unable to get user email address for this event type: {event_type}"
+                    f"Verification service: unable to get user email address for this event type: {event_type}"
                 )
                 continue
             elif user_email_address is not None and event_type != "snippet_check":
@@ -203,7 +225,7 @@ def process_events(
                 )
 
                 logging.info(
-                    f"User email address {user_email_address} domain verification status: {user_verified}"
+                    f"Verification service: {user_email_address} domain verification: {user_verified}"
                 )
 
                 if not user_verified:
@@ -211,12 +233,12 @@ def process_events(
                         user_email_address, verified_users_file
                     )
                     logging.info(
-                        f"User email address {user_email_address} user verification status: {user_verified}"
+                        f"Verification service: {user_email_address} user verification: {user_verified}"
                     )
 
             elif event_type != "snippet_check":
                 logging.info(
-                    f"Snippet check event type received, individual snippet verification will be done at a later point by the GitLab Item Retrieval Service. Passing event to the next queue."
+                    f"Verification service: snippet check event type received, individual snippet verification will be done at a later point by the GitLab Item Retrieval Service. Passing event to the next queue."
                 )
 
             if user_verified:
@@ -224,7 +246,15 @@ def process_events(
                 continue
 
             queue_name = "verification_" + event_type
-            redis_conn.lpush(queue_name, json.dumps(event_data))
+            try:
+                redis_conn.lpush(queue_name, json.dumps(event_data))
+                logging.debug(
+                    f"Verification service: pushed event to queue: {queue_name}"
+                )
+            except Exception as e:
+                logging.error(
+                    f"Verification service: error pushing event to queue {queue_name}: {e}"
+                )
 
         queue_length.set(redis_conn.llen("event_" + event_type))
 
@@ -235,13 +265,13 @@ if __name__ == "__main__":
     # Start the Flask server in a separate thread
     from threading import Thread
 
-    Thread(target=app.run, kwargs={"port": 5002}).start()
+    Thread(target=app.run, kwargs={"port": 8001}).start()
 
     process_events(
-        # verified_domains_file="verification_service/verified_domains.yaml",
-        # verified_users_file="verification_service/verified_users.yaml",
-        verified_domains_file="verified_domains.yaml",
-        verified_users_file="verified_users.yaml",
+        verified_domains_file="verification_service/verified_domains.yaml",
+        verified_users_file="verification_service/verified_users.yaml",
+        # verified_domains_file="verified_domains.yaml",
+        # verified_users_file="verified_users.yaml",
         gitlab_url=os.getenv("GITLAB_URL"),
         gitlab_access_token=os.environ.get("GITLAB_ACCESS_TOKEN"),
     )

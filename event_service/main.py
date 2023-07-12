@@ -59,7 +59,7 @@ def create_app(app_name: str) -> Sanic:
         object_kind = gitlab_event.get("object_kind")
         action = gitlab_event.get("object_attributes", {}).get("action")
 
-        logging.debug(f"Received event: {event_name}")
+        logging.debug(f"Event service: received event: {event_name}")
 
         # Project-related events
         if event_name in [
@@ -95,11 +95,13 @@ def create_app(app_name: str) -> Sanic:
                         queue_name = f"issue_note_update"
 
             except KeyError:
-                logging.debug("object_attributes.note does not exist in gitlab_event")
+                logging.debug(
+                    "Event service: object_attributes.note does not exist in gitlab_event"
+                )
 
         else:
             logging.debug(
-                f"Unhandled event: {event_name if event_name else object_kind}"
+                f"Event service: unhandled event: {event_name if event_name else object_kind}"
             )
 
         event_types_counter.labels(queue_name).inc()
@@ -108,9 +110,11 @@ def create_app(app_name: str) -> Sanic:
 
         try:
             redis_conn.lpush(queue_name, json.dumps(gitlab_event))
-            logging.debug(f"Pushed event to queue: {queue_name}")
+            logging.debug(f"Event service: pushed event to queue: {queue_name}")
         except Exception as e:
-            logging.error(f"Error pushing event to queue {queue_name}: {e}")
+            logging.error(
+                f"Event service: error pushing event to queue {queue_name}: {e}"
+            )
 
         return sanic_json({"message": "Event received"})
 
