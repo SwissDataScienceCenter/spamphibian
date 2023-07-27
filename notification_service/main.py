@@ -68,10 +68,10 @@ def format_message(queue, message):
 
     event_data = data["event_data"]
     prediction = data["prediction"]
-    scores = data["scores"][0]
+    score = data["score"]
 
     # Convert strings to floats and round the scores to 2 decimal places
-    scores_rounded = {k: round(float(v), 3) for k, v in scores.items()}
+    #scores_rounded = {k: round(float(v), 3) for k, v in scores.items()}
 
     queue_name = queue.removeprefix("classification_")
 
@@ -97,7 +97,7 @@ def format_message(queue, message):
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": f"*Spam Score*: {scores_rounded['1']}",
+                        "text": f"*Spam Score*: {score}",
                     },
                 },
             ]
@@ -174,7 +174,7 @@ def format_message(queue, message):
                         },
                         {
                             "type": "mrkdwn",
-                            "text": f"*Spam Score*: {scores_rounded['1']}",
+                            "text": f"*Spam Score*: {score}",
                         },
                     ],
                 },
@@ -224,7 +224,7 @@ def format_message(queue, message):
                         },
                         {
                             "type": "mrkdwn",
-                            "text": f"*Spam Score*: {scores_rounded['1']}",
+                            "text": f"*Spam Score*: {score}",
                         },
                     ],
                 },
@@ -284,7 +284,7 @@ def format_message(queue, message):
                         },
                         {
                             "type": "mrkdwn",
-                            "text": f"*Spam Score*: {scores_rounded['1']}",
+                            "text": f"*Spam Score*: {score}",
                         },
                     ],
                 },
