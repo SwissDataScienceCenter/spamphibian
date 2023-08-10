@@ -15,6 +15,8 @@ class GitlabUserSpamClassifier:
     def run(self):
         while True:
             original_list_name, data = self.redis_client.blpop("retrieval_user_create")
+            original_list_name = original_list_name.decode("utf-8")
+            postfix = original_list_name.split("_", 1)[-1]
 
             data = json.loads(data.decode("utf-8"))
 
@@ -22,7 +24,7 @@ class GitlabUserSpamClassifier:
             data_json = json.dumps(data)
 
             # Define the url for the prediction service
-            url = "http://127.0.0.1:5000/predict"
+            url = f"http://127.0.0.1:5000/predict_{postfix}"
 
 
             # Send the POST request
@@ -43,8 +45,6 @@ class GitlabUserSpamClassifier:
 
             results_json = json.dumps(results)
 
-            original_list_name = original_list_name.decode("utf-8")
-            postfix = original_list_name.split("_", 1)[-1]
             new_list_name = "classification_" + postfix
 
             logging.debug(

@@ -82,7 +82,7 @@ def retrieve_gitlab_objects(GITLAB_URL, GITLAB_ACCESS_TOKEN, redis_conn=None, te
                     )
 
                 logging.debug(
-                    f"Retrieval service: gitlab_object received for {event_type}: {gitlab_object.attributes}"
+                    f'Retrieval service: gitlab_object retrieved for {event_type} by {event_data["user_id"]}'
                 )
 
             elif event_type in project_events:
@@ -95,7 +95,7 @@ def retrieve_gitlab_objects(GITLAB_URL, GITLAB_ACCESS_TOKEN, redis_conn=None, te
                     )
 
                 logging.debug(
-                    f"Retrieval service: gitlab_object received for {event_type}: {gitlab_object.attributes}"
+                    f"Retrieval service: gitlab_object retrieved for {event_type}: {gitlab_object.attributes}"
                 )
 
             elif event_type in issue_events:
@@ -113,7 +113,7 @@ def retrieve_gitlab_objects(GITLAB_URL, GITLAB_ACCESS_TOKEN, redis_conn=None, te
                     )
 
                 logging.debug(
-                    f"Retrieval service: gitlab_object received for {event_type}: {gitlab_object.attributes}"
+                    f"Retrieval service: gitlab_object retrieved for {event_type}: {gitlab_object.attributes}"
                 )
 
             elif event_type in issue_note_events:
@@ -130,7 +130,7 @@ def retrieve_gitlab_objects(GITLAB_URL, GITLAB_ACCESS_TOKEN, redis_conn=None, te
                     )
 
                 logging.debug(
-                    f"Retrieval service: gitlab_object received for {event_type}: {gitlab_object.attributes}"
+                    f"Retrieval service: gitlab_object retrieved for {event_type}: {gitlab_object.attributes}"
                 )
 
             elif event_type in group_events:
@@ -143,7 +143,7 @@ def retrieve_gitlab_objects(GITLAB_URL, GITLAB_ACCESS_TOKEN, redis_conn=None, te
                     )
 
                 logging.debug(
-                    f"Retrieval service: gitlab_object received for {event_type}: {gitlab_object.attributes}"
+                    f"Retrieval service: gitlab_object retrieved for {event_type}: {gitlab_object.attributes}"
                 )
 
             else:
