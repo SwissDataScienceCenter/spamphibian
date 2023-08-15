@@ -4,16 +4,22 @@ import pandas as pd
 import pickle
 from sklearn.base import BaseEstimator, TransformerMixin
 import tensorflow as tf
-import keras
-
+import numpy as np
 
 app = Flask(__name__)
 api = Api(app)
 
-with open("train_model/users/preprocessing_pipeline.pkl", "rb") as f:
-    preprocessing_pipeline = pickle.load(f)
+def to_dense(x):
+    return np.asarray(x.todense())
 
-model = tf.keras.models.load_model("train_model/users/user_model.keras")
+def load_resources():
+    with open("train_model/users/preprocessing_pipeline.pkl", "rb") as f:
+        pipeline = pickle.load(f)
+    loaded_model = tf.keras.models.load_model("train_model/users/keras_model.keras")
+    return pipeline, loaded_model
+
+preprocessing_pipeline, model = load_resources()
+
 class LengthTransformer(BaseEstimator, TransformerMixin):
     def __init__(self, columns):
         self.columns = columns
@@ -29,7 +35,6 @@ class LengthTransformer(BaseEstimator, TransformerMixin):
             )
         return X_copy
 
-
 class IsNullTransformer(BaseEstimator, TransformerMixin):
     def __init__(self, columns):
         self.columns = columns
@@ -42,7 +47,6 @@ class IsNullTransformer(BaseEstimator, TransformerMixin):
         for col in self.columns:
             X_copy[col + "_isnull"] = X_copy[col].isnull().astype(int)
         return X_copy
-
 
 class UserSpamClassifier(Resource):
     def post(self):
@@ -104,9 +108,9 @@ class UserSpamClassifier(Resource):
 
         prediction = model.predict(processed_data)
 
-        prediction_label = 1 if prediction > 0.5 else 0
+        prediction_label = 1 if prediction[0][0] > 0.5 else 0
 
-        return jsonify({"prediction": prediction_label, "score": prediction.item()})
+        return jsonify({"prediction": prediction_label, "score": prediction[0][0].item()})
 
 
 api.add_resource(UserSpamClassifier, "/predict_user_create")
