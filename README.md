@@ -113,7 +113,7 @@ A web service that evaluates the data from GitLab is required to run the service
 
 A system hook must be configured on the GitLab instance to send notifications to the service. The URL of the Spamphibian service must be configured in the system hook.
 
-Currently, Spamphibian only evaluates new users when they are created.
+Currently, Spamphibian only evaluates `user_create` and `user_rename` events.
 
 Spamphibian can then be started using `python main.py`.
 

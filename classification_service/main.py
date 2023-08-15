@@ -15,60 +15,63 @@ class GitlabUserSpamClassifier:
 
     def run(self):
         while True:
-            original_list_name, data = self.redis_client.blpop("retrieval_user_create")
-            original_list_name = original_list_name.decode("utf-8")
-            postfix = original_list_name.split("_", 1)[-1]
+            for queue_name in ["retrieval_user_create", "retrieval_user_rename"]:
+                data = self.redis_client.lpop(queue_name)
+                if data:
+                    postfix = queue_name.split("_", 1)[-1]
 
-            data = json.loads(data.decode("utf-8"))
+                    data = json.loads(data.decode("utf-8"))
 
-            # Convert dictionary to json
-            data_json = json.dumps(data)
+                    # Convert dictionary to json
+                    data_json = json.dumps(data)
 
-            # Define the url for the prediction service
-            url = f"http://127.0.0.1:5000/predict_{postfix}"
+                    # Define the url for the prediction service
+                    url = f"http://127.0.0.1:5000/predict_{postfix}"
 
-            # Send the POST request
-            response = requests.post(
-                url, data=data_json, headers={"Content-Type": "application/json"}
-            )
+                    # Send the POST request
+                    response = requests.post(
+                        url,
+                        data=data_json,
+                        headers={"Content-Type": "application/json"},
+                    )
 
-            # Print the prediction
-            print(response)
+                    # Print the prediction
+                    print(response)
 
-            prediction = response.json()["prediction"]
+                    prediction = response.json()["prediction"]
 
-            score = round(response.json()["score"], 3)
+                    score = round(response.json()["score"], 3)
 
-            results = {
-                "event_data": data,
-                "prediction": prediction,
-                "score": score,
-            }
+                    results = {
+                        "event_data": data,
+                        "prediction": prediction,
+                        "score": score,
+                    }
 
-            results_json = json.dumps(results)
+                    results_json = json.dumps(results)
 
-            new_list_name = "classification_" + postfix
+                    new_list_name = "classification_" + postfix
 
-            logging.debug(
-                {
-                    "Classification service:": "pushing results to Redis queue",
-                    "username": data["username"],
-                    "event_type": postfix,
-                    "prediction": prediction,
-                    "score": score,
-                }
-            )
+                    logging.debug(
+                        {
+                            "Classification service:": "pushing results to Redis queue",
+                            "username": data["username"],
+                            "event_type": postfix,
+                            "prediction": prediction,
+                            "score": score,
+                        }
+                    )
 
-            logging.debug(
-                f"Classification service: results for event {postfix} by {data['username']}: prediction: {prediction}, scores: {score}"
-            )
+                    logging.debug(
+                        f"Classification service: results for event {postfix} by {data['username']}: prediction: {prediction}, scores: {score}"
+                    )
 
-            logging.debug(
-                f"Classification service: pushing results to Redis queue {new_list_name}"
-            )
+                    logging.debug(
+                        f"Classification service: pushing results to Redis queue {new_list_name}"
+                    )
 
-            # Push the results JSON string into the relevant Redis queue
-            self.redis_client.lpush(new_list_name, results_json)
+                    # Push the results JSON string into the relevant Redis queue
+                    self.redis_client.lpush(new_list_name, results_json)
 
             time.sleep(0.1)
 

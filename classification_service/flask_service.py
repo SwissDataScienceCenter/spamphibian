@@ -121,7 +121,7 @@ class UserSpamClassifier(Resource):
         )
 
 
-api.add_resource(UserSpamClassifier, "/predict_user_create")
+api.add_resource(UserSpamClassifier, "/predict_user_create", "/predict_user_rename")
 
 if __name__ == "__main__":
     app.run(port=5000, debug=True)
