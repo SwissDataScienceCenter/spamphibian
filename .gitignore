@@ -160,7 +160,7 @@ cython_debug/
 #.idea/
 
 # Custom Spamphibian development stuff
-verification_service/verified_domains.yaml
+verification_service/verified_domains_sdsc.yaml
 prometheus_multiproc_dir
 models/
 train_model/
