@@ -8,6 +8,7 @@ logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
+
 class GitlabUserSpamClassifier:
     def __init__(self):
         self.redis_client = redis.Redis(host="localhost", port=6379, db=0)
@@ -26,9 +27,10 @@ class GitlabUserSpamClassifier:
             # Define the url for the prediction service
             url = f"http://127.0.0.1:5000/predict_{postfix}"
 
-
             # Send the POST request
-            response = requests.post(url, data=data_json, headers={'Content-Type': 'application/json'})
+            response = requests.post(
+                url, data=data_json, headers={"Content-Type": "application/json"}
+            )
 
             # Print the prediction
             print(response)

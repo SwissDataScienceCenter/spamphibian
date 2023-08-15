@@ -71,7 +71,7 @@ def format_message(queue, message):
     score = data["score"]
 
     # Convert strings to floats and round the scores to 2 decimal places
-    #scores_rounded = {k: round(float(v), 3) for k, v in scores.items()}
+    # scores_rounded = {k: round(float(v), 3) for k, v in scores.items()}
 
     queue_name = queue.removeprefix("classification_")
 

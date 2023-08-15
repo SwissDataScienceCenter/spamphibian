@@ -70,8 +70,12 @@ def verify_email():
 
     logging.debug(f"Request received on /verify_email for email: {email}")
 
-    domain_verified = check_domain_verification(email, "verification_service/verified_domains.yaml")
-    user_verified = check_user_verification(email, "verification_service/verified_users.yaml")
+    domain_verified = check_domain_verification(
+        email, "verification_service/verified_domains.yaml"
+    )
+    user_verified = check_user_verification(
+        email, "verification_service/verified_users.yaml"
+    )
 
     logging.debug(
         f"{email} Domain verification status: {domain_verified}, user verification status: {user_verified}"

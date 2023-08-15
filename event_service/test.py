@@ -12,6 +12,7 @@ from event_service.main import create_app
 
 from test.mock_redis import MockRedis
 
+
 class TestEventService(unittest.TestCase):
     def setUp(self):
         self.redis_mock = MockRedis()

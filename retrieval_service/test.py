@@ -11,9 +11,9 @@ from retrieval_service.main import retrieve_gitlab_objects
 
 from test.mock_redis import MockRedis
 
-class TestService(unittest.TestCase):
 
-    @patch('gitlab.Gitlab')
+class TestService(unittest.TestCase):
+    @patch("gitlab.Gitlab")
     def test_retrieve_gitlab_objects(self, mock_gitlab):
         redis_conn = MockRedis()
 
@@ -26,11 +26,14 @@ class TestService(unittest.TestCase):
 
         redis_conn.lpush("verification_user_create", json.dumps({"user_id": "123"}))
 
-        retrieve_gitlab_objects('https://gitlab.com', 'token', redis_conn, testing=True)
+        retrieve_gitlab_objects("https://gitlab.com", "token", redis_conn, testing=True)
 
-        mock_gitlab.assert_called_once_with('https://gitlab.com', private_token='token')
+        mock_gitlab.assert_called_once_with("https://gitlab.com", private_token="token")
         mock_gl.users.get.assert_called_once_with("123")
-        self.assertEqual(redis_conn.lpop("retrieval_user_create"), json.dumps({"user_id": "123"}))
+        self.assertEqual(
+            redis_conn.lpop("retrieval_user_create"), json.dumps({"user_id": "123"})
+        )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

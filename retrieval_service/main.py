@@ -42,7 +42,9 @@ snippet_events = [
 ]
 
 
-def retrieve_gitlab_objects(GITLAB_URL, GITLAB_ACCESS_TOKEN, redis_conn=None, testing=False):
+def retrieve_gitlab_objects(
+    GITLAB_URL, GITLAB_ACCESS_TOKEN, redis_conn=None, testing=False
+):
     if redis_conn is None:
         redis_conn = redis.Redis(host="localhost", port=6379, db=0)
 
@@ -66,7 +68,6 @@ def retrieve_gitlab_objects(GITLAB_URL, GITLAB_ACCESS_TOKEN, redis_conn=None, te
                 if testing:
                     return
                 continue
-
 
             logging.info(f"Retrieval service: processing event {event_type}")
 

@@ -9,11 +9,14 @@ from verification_service.main import process_events, app
 
 from test.mock_redis import MockRedis
 
+
 class TestVerificationService(unittest.TestCase):
     def setUp(self):
         self.redis_mock = MockRedis()
         self.redis_class_patch = patch("redis.StrictRedis", autospec=True)
-        self.sleep_patch = patch("verification_service.main.sleep", side_effect=self.mock_sleep)
+        self.sleep_patch = patch(
+            "verification_service.main.sleep", side_effect=self.mock_sleep
+        )
 
         # Start patches
         self.mock_redis_class = self.redis_class_patch.start()
