@@ -1,0 +1,13 @@
+Flask
+Flask-RESTful
+pandas
+tensorflow-macos==2.11.0
+Sanic
+redis
+prometheus-client
+python-gitlab
+prometheus-flask-exporter
+Werkzeug
+scikit-learn
+scikeras
+pyyaml

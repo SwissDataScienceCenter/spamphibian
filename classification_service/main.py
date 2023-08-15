@@ -31,11 +31,11 @@ class GitlabUserSpamClassifier:
             response = requests.post(url, data=data_json, headers={'Content-Type': 'application/json'})
 
             # Print the prediction
-            print(response.json())
+            print(response)
 
             prediction = response.json()["prediction"]
 
-            score = response.json()["score"]
+            score = round(response.json()["score"], 3)
 
             results = {
                 "event_data": data,

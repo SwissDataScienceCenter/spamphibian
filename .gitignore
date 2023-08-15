@@ -163,3 +163,7 @@ cython_debug/
 verification_service/verified_domains.yaml
 prometheus_multiproc_dir
 models/
+train_model/
+spamphibian-venv/
+.vscode/
+.DS_Store

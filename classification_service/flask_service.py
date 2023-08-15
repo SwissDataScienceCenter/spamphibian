@@ -2,18 +2,18 @@ from flask import Flask, request, jsonify
 from flask_restful import Resource, Api
 import pandas as pd
 import pickle
-import tensorflow as tf
 from sklearn.base import BaseEstimator, TransformerMixin
+import tensorflow as tf
+import keras
+
 
 app = Flask(__name__)
 api = Api(app)
 
-with open("models/users/ada_boost/preprocessing_pipeline.pkl", "rb") as f:
+with open("train_model/users/preprocessing_pipeline.pkl", "rb") as f:
     preprocessing_pipeline = pickle.load(f)
 
-model = tf.keras.models.load_model("models/users/ada_boost/my_tf_model")
-
-
+model = tf.keras.models.load_model("train_model/users/user_model.keras")
 class LengthTransformer(BaseEstimator, TransformerMixin):
     def __init__(self, columns):
         self.columns = columns

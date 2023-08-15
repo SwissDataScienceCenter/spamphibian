@@ -5,7 +5,7 @@ import time
 
 
 def run_script(script):
-    os.system(f"python3.11 {script}")
+    os.system(f"python {script}")
 
 
 if __name__ == "__main__":
