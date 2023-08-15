@@ -48,7 +48,7 @@ class TestEventService(unittest.TestCase):
 
         for event_type in event_types:
             # load json data from file
-            with open(f"../test/json_data/{event_type}.json", "r") as file:
+            with open(f"test/json_data/{event_type}.json", "r") as file:
                 data = json.load(file)
             json_data[event_type] = json.dumps(data)
 

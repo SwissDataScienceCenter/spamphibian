@@ -57,7 +57,7 @@ class TestVerificationService(unittest.TestCase):
         test_cases = []
         json_data = {}
 
-        with open(f"../test/json_data/group_members_response.json", "r") as file:
+        with open(f"test/json_data/group_members_response.json", "r") as file:
             group_members_response = json.load(file)
 
         webhook_event_types = [
@@ -66,7 +66,7 @@ class TestVerificationService(unittest.TestCase):
 
         for event_type in webhook_event_types:
             # load json data from file
-            with open(f"../test/json_data/{event_type}.json", "r") as file:
+            with open(f"test/json_data/{event_type}.json", "r") as file:
                 data = json.load(file)
             json_data[event_type] = json.dumps(data)
 
@@ -154,7 +154,7 @@ class TestVerificationService(unittest.TestCase):
         # Test case for snippet check
 
         # load json data from file
-        with open(f"../test/json_data/snippet_check.json", "r") as file:
+        with open(f"test/json_data/snippet_check.json", "r") as file:
             data = json.load(file)
         json_data["snippet_check"] = json.dumps(data)
 
@@ -206,8 +206,8 @@ class TestVerificationService(unittest.TestCase):
 
                 try:
                     process_events(
-                        verified_domains_file="verified_domains.yaml",
-                        verified_users_file="verified_users.yaml",
+                        verified_domains_file="verification_service/verified_domains.yaml",
+                        verified_users_file="verification_service/verified_users.yaml",
                         gitlab_url="http://gitlab.com",
                         gitlab_access_token="1234567890",
                     )

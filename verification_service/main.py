@@ -70,8 +70,8 @@ def verify_email():
 
     logging.debug(f"Request received on /verify_email for email: {email}")
 
-    domain_verified = check_domain_verification(email, "verified_domains.yaml")
-    user_verified = check_user_verification(email, "verified_users.yaml")
+    domain_verified = check_domain_verification(email, "verification_service/verified_domains.yaml")
+    user_verified = check_user_verification(email, "verification_service/verified_users.yaml")
 
     logging.debug(
         f"{email} Domain verification status: {domain_verified}, user verification status: {user_verified}"
@@ -270,8 +270,6 @@ if __name__ == "__main__":
     process_events(
         verified_domains_file="verification_service/verified_domains.yaml",
         verified_users_file="verification_service/verified_users.yaml",
-        # verified_domains_file="verified_domains.yaml",
-        # verified_users_file="verified_users.yaml",
         gitlab_url=os.getenv("GITLAB_URL"),
         gitlab_access_token=os.environ.get("GITLAB_ACCESS_TOKEN"),
     )
