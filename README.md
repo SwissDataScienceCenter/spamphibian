@@ -95,7 +95,19 @@ Coming soon!
 
 ## Usage
 
-Coming soon!
+Spamphibian is in a very early development stage. It is not yet ready for production use and currently requires manual configuration and bespoke components to be built to get it working. The following steps are necessary to get it working:
+
+The following environment variables are required:
+
+- `GITLAB_URL`: The URL of the GitLab instance to connect to.
+- `GITLAB_TOKEN`: The token to use to authenticate with the GitLab instance.
+- `SLACK_WEBHOOK_URL`: The URL of the Slack webhook to use to send notifications.
+
+Install the dependencies in requirements.txt using `pip install -r requirements.txt`. Beware the requirement for `tensorflow-macos`; replace it with `tensorflow` for other platforms.
+
+A local Redis instance is required to run the service, which can be started using `docker run --env=ALLOW_EMPTY_PASSWORD=yes --runtime=runc -p 6379:6379 -d bitnami/redis:latest`, for example.
+
+A web service that evaluates the data from GitLab is required to run the service. An example of this can be found in `classification_service/flask_service.py`. Beware that this example service requires a preprocessing pipeline and Keras model to be present and will not work out of the box currently. A simple script training model will be provided in the future, so these components can be built easily using your own GitLab data.
 
 ## Contributing
 
