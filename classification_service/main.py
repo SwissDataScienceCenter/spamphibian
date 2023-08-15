@@ -13,7 +13,7 @@ class GitlabUserSpamClassifier:
     def __init__(self):
         self.redis_client = redis.Redis(host="localhost", port=6379, db=0)
 
-    def run(self):
+    def run(self, testing=False):
         while True:
             for queue_name in ["retrieval_user_create", "retrieval_user_rename"]:
                 data = self.redis_client.lpop(queue_name)
@@ -72,6 +72,10 @@ class GitlabUserSpamClassifier:
 
                     # Push the results JSON string into the relevant Redis queue
                     self.redis_client.lpush(new_list_name, results_json)
+
+            # If testing, break out of the infinite loop
+            if testing:
+                break
 
             time.sleep(0.1)
 

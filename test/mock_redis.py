@@ -39,8 +39,9 @@ class MockRedis:
             and isinstance(self.cache[key], list)
             and len(self.cache[key]) > 0
         ):
-            # print(f"lpop: {self.cache[key]}")
-            return self.cache[key].pop(0)
+            # Retrieve the value and encode it to bytes
+            value = self.cache[key].pop(0)
+            return value.encode('utf-8') if isinstance(value, str) else value
         else:
             return None
 
