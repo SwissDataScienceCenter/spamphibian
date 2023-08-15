@@ -1,6 +1,6 @@
 # Spamphibian
 
-Spamphibian is currently in very early development. It is a scalable and low-latency spam detection and management service for GitLab, designed to identify, classify, and handle potential spam activities using machine learning models. The service is implemented in Python and uses the GitLab API and Redis.
+Spamphibian is in a very early development stage. It is a scalable and low-latency spam detection and management service for GitLab, designed to identify, classify, and handle potential spam activities using machine learning models. The service is implemented in Python and uses the GitLab API and Redis.
 
 ## Table of Contents
 
@@ -15,6 +15,8 @@ Spamphibian is currently in very early development. It is a scalable and low-lat
 ## Overview
 
 Spamphibian uses various components to combat spam, including GitLab API, Redis queues, and multiple jobs and services.
+
+This is the planned architecture of Spamphibian, but it is subject to change:
 
 ```mermaid
   flowchart TB
@@ -100,16 +102,16 @@ Spamphibian is in a very early development stage. It is not yet ready for produc
 The following environment variables are required:
 
 - `GITLAB_URL`: The URL of the GitLab instance to connect to.
-- `GITLAB_TOKEN`: The token to use to authenticate with the GitLab instance.
+- `GITLAB_TOKEN`: The token to use to authenticate with the GitLab instance, which must have admin privileges.
 - `SLACK_WEBHOOK_URL`: The URL of the Slack webhook to use to send notifications.
 
-Install the dependencies in requirements.txt using `pip install -r requirements.txt`. Beware the requirement for `tensorflow-macos`; replace it with `tensorflow` for other platforms.
+Install the dependencies in `requirements.txt` using `pip install -r requirements.txt`. Beware the requirement for `tensorflow-macos`; replace it with `tensorflow` for other platforms.
 
 A local Redis instance is required to run the service, which can be started using `docker run --env=ALLOW_EMPTY_PASSWORD=yes --runtime=runc -p 6379:6379 -d bitnami/redis:latest`, for example.
 
-A web service that evaluates the data from GitLab is required to run the service. An example of this can be found in `classification_service/flask_service.py`. Beware that this example service requires a preprocessing pipeline and Keras model to be present and will not work out of the box currently. A simple script training model will be provided in the future, so these components can be built easily using your own GitLab data.
+A web service that evaluates the data from GitLab is required to run the service. An example evaluation service can be found in `classification_service/flask_service.py`. Beware that this example service requires a preprocessing pipeline and Keras model to be present and will not work out of the box currently. A simple script training model will be published in the future, so these components can be built easily using your own GitLab data.
 
-A system hook must be configured on the GitLab instance to send notifications to the service. The URL of the service must be configured in the system hook.
+A system hook must be configured on the GitLab instance to send notifications to the service. The URL of the Spamphibian service must be configured in the system hook.
 
 Currently, Spamphibian only evaluates new users when they are created.
 
