@@ -1,5 +1,4 @@
-# Spamphibian ![frog eating flies](https://github.com/SwissDataScienceCenter/spamphibian/assets/515042/167f4b6f-5c13-4b52-a681-acdef1e07a25)
-
+# Spamphibian
 
 Spamphibian is in a very early development stage. It is a scalable and low-latency spam detection and management service for GitLab, designed to identify, classify, and handle potential spam activities using machine learning models. The service is implemented in Python and uses the GitLab API and Redis.
 
