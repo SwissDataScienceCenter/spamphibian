@@ -109,6 +109,12 @@ A local Redis instance is required to run the service, which can be started usin
 
 A web service that evaluates the data from GitLab is required to run the service. An example of this can be found in `classification_service/flask_service.py`. Beware that this example service requires a preprocessing pipeline and Keras model to be present and will not work out of the box currently. A simple script training model will be provided in the future, so these components can be built easily using your own GitLab data.
 
+A system hook must be configured on the GitLab instance to send notifications to the service. The URL of the service must be configured in the system hook.
+
+Currently, Spamphibian only evaluates new users when they are created.
+
+Spamphibian can then be started using `python main.py`.
+
 ## Contributing
 
 Contributions are welcome! Please read the contributing guidelines in the `CONTRIBUTING.md` file before making any contributions.
