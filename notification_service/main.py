@@ -56,7 +56,6 @@ for event_type in event_types:
     queue_names.append(f"classification_{event_type}")
 
 
-
 def format_message(queue, message):
     # Parse the JSON data
     data = json.loads(message)
@@ -303,12 +302,15 @@ def format_message(queue, message):
             ] = "Project Transferred on GitLab"
 
 
-def process_queue_message(r=redis.Redis(host="localhost", port=6379), slack_webhook_url=os.getenv("SLACK_WEBHOOK_URL"), testing=False):
+def process_queue_message(
+    r=redis.Redis(host="localhost", port=6379),
+    slack_webhook_url=os.getenv("SLACK_WEBHOOK_URL"),
+    testing=False,
+):
     while True:
         for queue_name in queue_names:
             data = r.lpop(queue_name)
             if data:
-
                 data = format_message(queue_name, data)
                 response = requests.post(slack_webhook_url, json=data)
 
@@ -317,10 +319,13 @@ def process_queue_message(r=redis.Redis(host="localhost", port=6379), slack_webh
                         f"Notification service: failed to send message to Slack: {response.content}"
                     )
                 else:
-                    logging.debug("Notification service: successfully sent message to Slack")
+                    logging.debug(
+                        "Notification service: successfully sent message to Slack"
+                    )
 
         if testing:
             break
+
 
 if __name__ == "__main__":
     process_queue_message()
