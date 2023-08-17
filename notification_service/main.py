@@ -55,11 +55,6 @@ queue_names = []
 for event_type in event_types:
     queue_names.append(f"classification_{event_type}")
 
-# Get Slack webhook URL from env vars
-slack_webhook_url = os.getenv("SLACK_WEBHOOK_URL")
-
-# Create a connection to the Redis server
-r = redis.Redis(host="localhost", port=6379)
 
 
 def format_message(queue, message):
@@ -308,18 +303,24 @@ def format_message(queue, message):
             ] = "Project Transferred on GitLab"
 
 
-while True:
-    queue, message = r.brpop(queue_names, 0)
+def process_queue_message(r=redis.Redis(host="localhost", port=6379), slack_webhook_url=os.getenv("SLACK_WEBHOOK_URL"), testing=False):
+    while True:
+        for queue_name in queue_names:
+            data = r.lpop(queue_name)
+            if data:
 
-    message = message.decode("utf-8")
+                data = format_message(queue_name, data)
+                response = requests.post(slack_webhook_url, json=data)
 
-    data = format_message(queue.decode("utf-8"), message)
+                if response.status_code != 200:
+                    logging.debug(
+                        f"Notification service: failed to send message to Slack: {response.content}"
+                    )
+                else:
+                    logging.debug("Notification service: successfully sent message to Slack")
 
-    response = requests.post(slack_webhook_url, json=data)
+        if testing:
+            break
 
-    if response.status_code != 200:
-        logging.debug(
-            f"Notification service: failed to send message to Slack: {response.content}"
-        )
-    else:
-        logging.debug("Notification service: successfully sent message to Slack")
+if __name__ == "__main__":
+    process_queue_message()
