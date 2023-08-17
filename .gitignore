@@ -162,7 +162,6 @@ cython_debug/
 # Custom Spamphibian development stuff
 verification_service/verified_domains_sdsc.yaml
 prometheus_multiproc_dir
-models/
 train_model/
 spamphibian-venv/
 .vscode/

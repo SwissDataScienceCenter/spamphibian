@@ -9,6 +9,16 @@ import logging
 from prometheus_client import generate_latest, multiprocess, CollectorRegistry, Counter
 import os
 
+from common.constants import (
+    project_events,
+    user_events,
+    issue_events,
+    issue_note_events,
+    group_events,
+    snippet_events,
+    event_types,
+)
+
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
 )
@@ -62,16 +72,12 @@ def create_app(app_name: str) -> Sanic:
         logging.debug(f"Event service: received event: {event_name}")
 
         # Project-related events
-        if event_name in [
-            "project_create",
-            "project_rename",
-            "project_transfer",
-            "user_create",
-            "user_rename",
-            "group_create",
-            "group_rename",
-            "snippet_check",
-        ]:
+        if (
+            event_name in project_events
+            or event_name in user_events
+            or event_name in group_events
+            or event_name in snippet_events
+        ):
             queue_name = event_name
 
         # Issue-related events
@@ -121,8 +127,12 @@ def create_app(app_name: str) -> Sanic:
     return app
 
 
-if __name__ == "__main__":
+def main():
     loader = AppLoader(factory=partial(create_app, "EventService"))
     app = loader.load()
     app.prepare(port=8000, dev=True)
     Sanic.serve(primary=app, app_loader=loader)
+
+
+if __name__ == "__main__":
+    main()

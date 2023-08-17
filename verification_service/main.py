@@ -11,41 +11,19 @@ from flask import Flask, request, jsonify
 from prometheus_flask_exporter import PrometheusMetrics
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
+from common.constants import (
+    project_events,
+    user_events,
+    issue_events,
+    issue_note_events,
+    group_events,
+    snippet_events,
+    event_types,
+)
+
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
 )
-
-project_events = [
-    "project_create",
-    "project_rename",
-    "project_transfer",
-]
-
-user_events = [
-    "user_create",
-    "user_rename",
-]
-
-issue_events = [
-    "issue_open",
-    "issue_update",
-    "issue_close",
-    "issue_reopen",
-]
-
-issue_note_events = [
-    "issue_note_create",
-    "issue_note_update",
-]
-
-group_events = [
-    "group_create",
-    "group_rename",
-]
-
-snippet_events = [
-    "snippet_check",
-]
 
 # Define Prometheus metrics
 processed_events_total = Counter(
@@ -265,8 +243,7 @@ def process_events(
         sleep(1)
 
 
-if __name__ == "__main__":
-    # Start the Flask server in a separate thread
+def main():
     from threading import Thread
 
     Thread(target=app.run, kwargs={"port": 8001}).start()
@@ -277,3 +254,8 @@ if __name__ == "__main__":
         gitlab_url=os.getenv("GITLAB_URL"),
         gitlab_access_token=os.environ.get("GITLAB_ACCESS_TOKEN"),
     )
+
+
+if __name__ == "__main__":
+    # Start the Flask server in a separate thread
+    main()

@@ -7,7 +7,7 @@ logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-from retrieval_service.main import retrieve_gitlab_objects
+from retrieval_service.main import main
 
 from test.mock_redis import MockRedis
 
@@ -26,12 +26,13 @@ class TestService(unittest.TestCase):
 
         redis_conn.lpush("verification_user_create", json.dumps({"user_id": "123"}))
 
-        retrieve_gitlab_objects("https://gitlab.com", "token", redis_conn, testing=True)
+        main("https://gitlab.com", "token", redis_conn, testing=True)
 
         mock_gitlab.assert_called_once_with("https://gitlab.com", private_token="token")
         mock_gl.users.get.assert_called_once_with("123")
         self.assertEqual(
-            redis_conn.lpop("retrieval_user_create"), json.dumps({"user_id": "123"})
+            redis_conn.lpop("retrieval_user_create"),
+            json.dumps({"user_id": "123"}).encode("utf-8"),
         )
 
 

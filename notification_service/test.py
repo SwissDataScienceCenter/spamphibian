@@ -3,7 +3,7 @@ from unittest.mock import patch, MagicMock
 import json
 from test.mock_redis import MockRedis
 
-from notification_service.main import process_queue_message
+from notification_service.main import main
 
 
 class TestSlackNotifier(unittest.TestCase):
@@ -56,9 +56,7 @@ class TestSlackNotifier(unittest.TestCase):
         redis_conn.lpush(queue, message)
 
         # Call the function
-        process_queue_message(
-            r=redis_conn, slack_webhook_url="http://slack.com", testing=True
-        )
+        main(r=redis_conn, slack_webhook_url="http://slack.com", testing=True)
 
         # Assert that the function made a post request with the expected payload
         mock_post.assert_called_once_with("http://slack.com", json=expected_response)

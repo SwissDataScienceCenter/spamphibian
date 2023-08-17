@@ -5,60 +5,29 @@ import gitlab
 from time import sleep
 import os
 
+from common.constants import (
+    project_events,
+    user_events,
+    issue_events,
+    issue_note_events,
+    group_events,
+    snippet_events,
+    event_types,
+)
+
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-project_events = [
-    "project_create",
-    "project_rename",
-    "project_transfer",
-]
 
-user_events = [
-    "user_create",
-    "user_rename",
-]
-
-issue_events = [
-    "issue_open",
-    "issue_update",
-    "issue_close",
-    "issue_reopen",
-]
-
-issue_note_events = [
-    "issue_note_create",
-    "issue_note_update",
-]
-
-group_events = [
-    "group_create",
-    "group_rename",
-]
-
-snippet_events = [
-    "snippet_check",
-]
-
-
-def retrieve_gitlab_objects(
-    GITLAB_URL, GITLAB_ACCESS_TOKEN, redis_conn=None, testing=False
+def main(
+    GITLAB_URL=os.getenv("GITLAB_URL"),
+    GITLAB_ACCESS_TOKEN=os.environ.get("GITLAB_ACCESS_TOKEN"),
+    redis_conn=redis.Redis(host="localhost", port=6379, db=0),
+    testing=False,
 ):
-    if redis_conn is None:
-        redis_conn = redis.Redis(host="localhost", port=6379, db=0)
-
     # Create a GitLab instance
     gl = gitlab.Gitlab(GITLAB_URL, private_token=GITLAB_ACCESS_TOKEN)
-
-    event_types = (
-        user_events
-        + project_events
-        + issue_events
-        + issue_note_events
-        + group_events
-        + snippet_events
-    )
 
     while True:
         for event_type in event_types:
@@ -164,7 +133,7 @@ def retrieve_gitlab_objects(
 
 
 if __name__ == "__main__":
-    retrieve_gitlab_objects(
+    main(
         GITLAB_URL=os.getenv("GITLAB_URL"),
         GITLAB_ACCESS_TOKEN=os.environ.get("GITLAB_ACCESS_TOKEN"),
     )

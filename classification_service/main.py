@@ -4,6 +4,16 @@ import time
 import logging
 import requests
 
+from common.constants import (
+    project_events,
+    user_events,
+    issue_events,
+    issue_note_events,
+    group_events,
+    snippet_events,
+    event_types,
+)
+
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
 )
@@ -12,12 +22,20 @@ logging.basicConfig(
 class GitlabUserSpamClassifier:
     def __init__(self):
         self.redis_client = redis.Redis(host="localhost", port=6379, db=0)
+        self.user_event_queue_names = []
+
+        for user_event_type in user_events:
+            self.user_event_queue_names.append(f"retrieval_{user_event_type}")
 
     def run(self, testing=False):
         while True:
-            for queue_name in ["retrieval_user_create", "retrieval_user_rename"]:
+            for queue_name in self.user_event_queue_names:
                 data = self.redis_client.lpop(queue_name)
                 if data:
+                    logging.debug(
+                        f"Classification service: processing event {queue_name}"
+                    )
+
                     postfix = queue_name.split("_", 1)[-1]
 
                     data = json.loads(data.decode("utf-8"))
@@ -77,9 +95,13 @@ class GitlabUserSpamClassifier:
             if testing:
                 break
 
-            time.sleep(0.1)
+            time.sleep(0.2)
+
+
+def main():
+    classifier = GitlabUserSpamClassifier()
+    classifier.run()
 
 
 if __name__ == "__main__":
-    classifier = GitlabUserSpamClassifier()
-    classifier.run()
+    main()

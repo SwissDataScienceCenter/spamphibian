@@ -5,49 +5,18 @@ import os
 import logging
 import datetime
 
-logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
+from common.constants import (
+    project_events,
+    user_events,
+    issue_events,
+    issue_note_events,
+    group_events,
+    snippet_events,
+    event_types,
 )
 
-project_events = [
-    "project_create",
-    "project_rename",
-    "project_transfer",
-]
-
-user_events = [
-    "user_create",
-    "user_rename",
-]
-
-issue_events = [
-    "issue_open",
-    "issue_update",
-    "issue_close",
-    "issue_reopen",
-]
-
-issue_note_events = [
-    "issue_note_create",
-    "issue_note_update",
-]
-
-group_events = [
-    "group_create",
-    "group_rename",
-]
-
-snippet_events = [
-    "snippet_check",
-]
-
-event_types = (
-    user_events
-    + project_events
-    + issue_events
-    + issue_note_events
-    + group_events
-    + snippet_events
+logging.basicConfig(
+    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
 queue_names = []
@@ -302,7 +271,7 @@ def format_message(queue, message):
             ] = "Project Transferred on GitLab"
 
 
-def process_queue_message(
+def main(
     r=redis.Redis(host="localhost", port=6379),
     slack_webhook_url=os.getenv("SLACK_WEBHOOK_URL"),
     testing=False,
@@ -328,4 +297,4 @@ def process_queue_message(
 
 
 if __name__ == "__main__":
-    process_queue_message()
+    main()
