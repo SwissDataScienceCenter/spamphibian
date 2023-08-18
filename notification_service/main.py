@@ -15,26 +15,20 @@ from common.constants import (
     event_types,
 )
 
+from common.event_processor import EventProcessor
+
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-queue_names = []
 
-for event_type in event_types:
-    queue_names.append(f"classification_{event_type}")
-
-
-def format_message(queue, message):
+def format_message(queue, data):
     # Parse the JSON data
-    data = json.loads(message)
+    # data = json.loads(message)
 
     event_data = data["event_data"]
     prediction = data["prediction"]
     score = data["score"]
-
-    # Convert strings to floats and round the scores to 2 decimal places
-    # scores_rounded = {k: round(float(v), 3) for k, v in scores.items()}
 
     queue_name = queue.removeprefix("classification_")
 
@@ -271,26 +265,32 @@ def format_message(queue, message):
             ] = "Project Transferred on GitLab"
 
 
+class SlackNotifier(EventProcessor):
+    def __init__(self, slack_webhook_url, queue_prefix, events, redis_conn=None):
+        super().__init__(queue_prefix, events, redis_conn)
+        self.slack_webhook_url = slack_webhook_url
+
+    def process_event(self, queue_name, data):
+        data = format_message(queue_name, data)
+        response = requests.post(self.slack_webhook_url, json=data)
+
+        if response.status_code != 200:
+            logging.debug(
+                f"Notification service: failed to send message to Slack: {response.content}"
+            )
+        else:
+            logging.debug("Notification service: successfully sent message to Slack")
+
+
 def main(
     r=redis.Redis(host="localhost", port=6379),
     slack_webhook_url=os.getenv("SLACK_WEBHOOK_URL"),
     testing=False,
 ):
-    while True:
-        for queue_name in queue_names:
-            data = r.lpop(queue_name)
-            if data:
-                data = format_message(queue_name, data)
-                response = requests.post(slack_webhook_url, json=data)
+    notifier = SlackNotifier(slack_webhook_url, "classification", event_types, r)
 
-                if response.status_code != 200:
-                    logging.debug(
-                        f"Notification service: failed to send message to Slack: {response.content}"
-                    )
-                else:
-                    logging.debug(
-                        "Notification service: successfully sent message to Slack"
-                    )
+    while True:
+        notifier.retrieve_event()
 
         if testing:
             break

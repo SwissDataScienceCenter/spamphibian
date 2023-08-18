@@ -15,125 +15,91 @@ from common.constants import (
     event_types,
 )
 
+from common.event_processor import EventProcessor
+
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
+class GitlabVerificationProcessor(EventProcessor):
+    def __init__(self, GITLAB_URL, GITLAB_ACCESS_TOKEN, redis_conn=None, testing=False):
+        super().__init__("verification", event_types, redis_conn)
+        self.gitlab_client = gitlab.Gitlab(GITLAB_URL, private_token=GITLAB_ACCESS_TOKEN)
+        self.testing = testing
 
-def main(
-    GITLAB_URL=os.getenv("GITLAB_URL"),
-    GITLAB_ACCESS_TOKEN=os.environ.get("GITLAB_ACCESS_TOKEN"),
-    redis_conn=redis.Redis(host="localhost", port=6379, db=0),
-    testing=False,
-):
-    # Create a GitLab instance
-    gl = gitlab.Gitlab(GITLAB_URL, private_token=GITLAB_ACCESS_TOKEN)
+    def process_event(self, queue_name, event_data):
+        event_type = queue_name.split("_", 1)[-1] # Split by the first underscore and get the event type
 
-    while True:
-        for event_type in event_types:
-            event = redis_conn.lpop("verification_" + event_type)
+        # Process each event type
+        if event_type in user_events:
+            gitlab_object = self._process_user_event(event_data)
+        elif event_type in project_events:
+            gitlab_object = self._process_project_event(event_data)
+        elif event_type in issue_events:
+            gitlab_object = self._process_issue_event(event_data)
+        elif event_type in issue_note_events:
+            gitlab_object = self._process_issue_note_event(event_data)
+        elif event_type in group_events:
+            gitlab_object = self._process_group_event(event_data)
+        else:
+            logging.info(f"{self.__class__.__name__}: event {event_type} received")
+            return
 
-            if event is None:
-                if testing:
-                    return
-                continue
+        # Push gitlab object to the redis queue
+        new_queue_name = "retrieval_" + event_type
+        try:
+            self.redis_client.lpush(new_queue_name, gitlab_object.to_json())
+            logging.debug(f"{self.__class__.__name__}: pushed event to queue: {new_queue_name}")
+        except Exception as e:
+            logging.error(f"{self.__class__.__name__}: error pushing event to queue {new_queue_name}: {e}")
 
-            logging.info(f"Retrieval service: processing event {event_type}")
+    # Break the main logic into helper methods for readability and maintainability
+    def _process_user_event(self, event_data):
+        try:
+            return self.gitlab_client.users.get(event_data["user_id"])
+        except gitlab.exceptions.GitlabGetError as e:
+            logging.info(f'{self.__class__.__name__}: error retrieving user ID {event_data["user_id"]} from GitLab API: {e}')
 
-            event_data = json.loads(event)
+    def _process_project_event(self, event_data):
+        try:
+            return self.gitlab_client.projects.get(event_data["project_id"])
+        except gitlab.exceptions.GitlabGetError as e:
+            logging.info(f'{self.__class__.__name__}: error retrieving project ID {event_data["project_id"]} from GitLab API: {e}')
 
-            if event_type in user_events:
-                try:
-                    gitlab_object = gl.users.get(event_data["user_id"])
+    def _process_issue_event(self, event_data):
+        try:
+            project = self.gitlab_client.projects.get(event_data["object_attributes"]["project_id"])
+            return project.issues.get(event_data["object_attributes"]["id"])
+        except gitlab.exceptions.GitlabGetError as e:
+            logging.info(f'{self.__class__.__name__}: error retrieving issue ID {event_data["object_attributes"]["id"]} from GitLab API: {e}')
+    
+    def _process_issue_note_event(self, event_data):
+        try:
+            project = self.gitlab_client.projects.get(event_data["project_id"])
+            issue = project.issues.get(event_data["issue"]["id"])
+            return issue.notes.get(event_data["object_attributes"]["id"])
+        except gitlab.exceptions.GitlabGetError as e:
+            logging.info(f'{self.__class__.__name__}: error retrieving issue note ID {event_data["object_attributes"]["id"]} from GitLab API: {e}')
 
-                except gitlab.exceptions.GitlabGetError as e:
-                    logging.info(
-                        f'Retrieval service: error retrieving user ID {event_data["user_id"]} from GitLab API: {e}'
-                    )
+    def _process_group_event(self, event_data):
+        try:
+            return self.gitlab_client.groups.get(event_data["group_id"])
+        except gitlab.exceptions.GitlabGetError as e:
+            logging.info(f'{self.__class__.__name__}: error retrieving group ID {event_data["group_id"]} from GitLab API: {e}')
 
-                logging.debug(
-                    f'Retrieval service: gitlab_object retrieved for {event_type} by {event_data["user_id"]}'
-                )
+    def run(self):
+        while True:
+            self.retrieve_event()
 
-            elif event_type in project_events:
-                try:
-                    gitlab_object = gl.projects.get(event_data["project_id"])
+            # If testing, break out of the infinite loop
+            if self.testing:
+                break
 
-                except gitlab.exceptions.GitlabGetError as e:
-                    logging.info(
-                        f'Retrieval service: error retrieving project ID {event_data["project_id"]} from GitLab API: {e}'
-                    )
+            sleep(1)
 
-                logging.debug(
-                    f"Retrieval service: gitlab_object retrieved for {event_type}: {gitlab_object.attributes}"
-                )
-
-            elif event_type in issue_events:
-                try:
-                    project = gl.projects.get(
-                        event_data["object_attributes"]["project_id"]
-                    )
-                    gitlab_object = project.issues.get(
-                        event_data["object_attributes"]["id"]
-                    )
-
-                except gitlab.exceptions.GitlabGetError as e:
-                    logging.info(
-                        f'Retrieval service: error retrieving issue ID {event_data["object_attributes"]["id"]} from GitLab API: {e}'
-                    )
-
-                logging.debug(
-                    f"Retrieval service: gitlab_object retrieved for {event_type}: {gitlab_object.attributes}"
-                )
-
-            elif event_type in issue_note_events:
-                try:
-                    project = gl.projects.get(event_data["project_id"])
-                    issue = project.issues.get(event_data["issue"]["id"])
-                    gitlab_object = issue.notes.get(
-                        event_data["object_attributes"]["id"]
-                    )
-
-                except gitlab.exceptions.GitlabGetError as e:
-                    logging.info(
-                        f'Retrieval service: error retrieving issue note ID {event_data["object_attributes"]["id"]} from GitLab API: {e}'
-                    )
-
-                logging.debug(
-                    f"Retrieval service: gitlab_object retrieved for {event_type}: {gitlab_object.attributes}"
-                )
-
-            elif event_type in group_events:
-                try:
-                    gitlab_object = gl.groups.get(event_data["group_id"])
-
-                except gitlab.exceptions.GitlabGetError as e:
-                    logging.info(
-                        f'Retrieval service: error retrieving group ID {event_data["group_id"]} from GitLab API: {e}'
-                    )
-
-                logging.debug(
-                    f"Retrieval service: gitlab_object retrieved for {event_type}: {gitlab_object.attributes}"
-                )
-
-            else:
-                logging.info(f"Retrieval service: event {event_type} received")
-
-            queue_name = "retrieval_" + event_type
-
-            try:
-                redis_conn.lpush(queue_name, gitlab_object.to_json())
-                logging.debug(f"Retrieval service: pushed event to queue: {queue_name}")
-            except Exception as e:
-                logging.error(
-                    f"Retrieval service: error pushing event to queue {queue_name}: {e}"
-                )
-
-        sleep(1)
-
+def main(GITLAB_URL=os.getenv("GITLAB_URL"), GITLAB_ACCESS_TOKEN=os.environ.get("GITLAB_ACCESS_TOKEN"), redis_conn=redis.Redis(host="localhost", port=6379, db=0), testing=False):
+    processor = GitlabVerificationProcessor(GITLAB_URL, GITLAB_ACCESS_TOKEN, redis_conn=redis_conn, testing=testing)
+    processor.run()
 
 if __name__ == "__main__":
-    main(
-        GITLAB_URL=os.getenv("GITLAB_URL"),
-        GITLAB_ACCESS_TOKEN=os.environ.get("GITLAB_ACCESS_TOKEN"),
-    )
+    main()
