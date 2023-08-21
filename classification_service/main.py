@@ -42,8 +42,7 @@ class GitlabUserSpamClassifier(EventProcessor):
             headers={"Content-Type": "application/json"},
         )
 
-        # Print the prediction
-        print(response)
+        logging.debug(f"Classification service: response: {response}")
 
         prediction = response.json()["prediction"]
 

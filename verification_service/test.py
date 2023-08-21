@@ -217,10 +217,6 @@ class TestVerificationService(unittest.TestCase):
                 except KeyboardInterrupt:
                     pass
 
-                print(
-                    f"input_event_type: {input_event_type}, output_event_type: {output_event_type}, output_value_expected: {output_value_expected}"
-                )
-
                 output_value = mock_redis.get(output_event_type)
                 if output_value_expected:
                     self.assertIsNotNone(output_value)

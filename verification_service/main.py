@@ -131,7 +131,7 @@ class VerificationEventProcessor(EventProcessor):
     def process_event(self, queue_name, data):
         event_type = queue_name.split("_", 1)[-1]
 
-        print(f"Verification service: processing event type {event_type}")
+        logging.debug(f"Verification service: processing event {event_type}")
 
         processed_events_total.inc()
 

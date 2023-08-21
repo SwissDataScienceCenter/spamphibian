@@ -27,7 +27,6 @@ class MockRedis:
 
     def lpush(self, key, value):
         # Simulate the LPUSH command in Redis
-        # print(f"lpush: {key} {value}")
         if key not in self.cache:
             self.cache[key] = []
         self.cache[key].insert(0, value)
