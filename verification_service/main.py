@@ -1,7 +1,6 @@
 import logging
 import os
 import re
-import json
 import redis
 import requests
 import yaml
@@ -213,7 +212,7 @@ class VerificationEventProcessor(EventProcessor):
             )
 
         if not user_verified:
-            self.redis_client.lpush("verification_" + event_type, json.dumps(data))
+            self.send_to_queue(event_type, data, prefix="verification")
             logging.debug(
                 f"Verification service: pushed event to queue: verification_{event_type}"
             )
