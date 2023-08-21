@@ -33,7 +33,7 @@ class TestVerificationService(unittest.TestCase):
     def mock_sleep(self, time_to_sleep):
         self.sleep_counter += 1
         print(f"Sleeping for 1 second...")
-        if self.sleep_counter > 3:
+        if self.sleep_counter > 10:
             raise KeyboardInterrupt()
 
     def test_process_events(self):
@@ -106,7 +106,7 @@ class TestVerificationService(unittest.TestCase):
                     )
                     mock_api_responses["event_group_create_2"] = patched_data
 
-                    patched_data = copy.deepcopy(patched_data)  # Make a new deep copy
+                    patched_data = copy.deepcopy(patched_data)
                     patched_data[1]["email"] = patched_data[1]["email"].replace(
                         "user@verified-domain.gov",
                         "verified-user@non-verified-domain.com",
@@ -155,7 +155,6 @@ class TestVerificationService(unittest.TestCase):
                     )
 
         # Test case for snippet check
-
         # load json data from file
         with open(f"test/json_data/snippet_check.json", "r") as file:
             data = json.load(file)
@@ -213,9 +212,14 @@ class TestVerificationService(unittest.TestCase):
                         verified_users_file="verification_service/verified_users.yaml",
                         gitlab_url="http://gitlab.com",
                         gitlab_access_token="1234567890",
+                        redis_conn=mock_redis,
                     )
                 except KeyboardInterrupt:
                     pass
+
+                print(
+                    f"input_event_type: {input_event_type}, output_event_type: {output_event_type}, output_value_expected: {output_value_expected}"
+                )
 
                 output_value = mock_redis.get(output_event_type)
                 if output_value_expected:
