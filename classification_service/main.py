@@ -55,10 +55,6 @@ class GitlabUserSpamClassifier(EventProcessor):
             "score": score,
         }
 
-        results_json = json.dumps(results)
-
-        new_list_name = "classification_" + postfix
-
         logging.debug(
             {
                 "Classification service:": "pushing results to Redis queue",
@@ -74,11 +70,11 @@ class GitlabUserSpamClassifier(EventProcessor):
         )
 
         logging.debug(
-            f"Classification service: pushing results to Redis queue {new_list_name}"
+            f"Classification service: pushing results to Redis queue classification_{postfix}"
         )
 
-        # Push the results JSON string into the relevant Redis queue
-        self.redis_client.lpush(new_list_name, results_json)
+        # Push the results JSON into the relevant Redis queue
+        self.send_to_queue(postfix, results, prefix="classification")
     
     def run(self, testing=False):
         while True:
