@@ -23,8 +23,6 @@ logging.basicConfig(
 
 
 def format_message(queue, data):
-    # Parse the JSON data
-    # data = json.loads(message)
 
     event_data = data["event_data"]
     prediction = data["prediction"]
