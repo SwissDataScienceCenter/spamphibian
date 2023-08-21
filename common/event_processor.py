@@ -36,7 +36,6 @@ class EventProcessor:
         :param data: Data to be sent.
         :param prefix: Optional prefix for the queue name. If not provided, the default prefix from initialization will be used.
         """
-        prefix = prefix or self.prefix
         queue_name = f"{prefix}_{event}"
         serialized_data = json.dumps(data)
         
