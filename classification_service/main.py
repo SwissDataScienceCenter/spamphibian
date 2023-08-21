@@ -20,6 +20,7 @@ logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
+
 class GitlabUserSpamClassifier(EventProcessor):
     def __init__(self):
         super().__init__("retrieval", user_events, redis_conn=None)
@@ -41,8 +42,6 @@ class GitlabUserSpamClassifier(EventProcessor):
             data=data_json,
             headers={"Content-Type": "application/json"},
         )
-
-        #print(response.status_code)
 
         # Check if the request was successful
         if response.status_code != 200:
@@ -77,7 +76,7 @@ class GitlabUserSpamClassifier(EventProcessor):
 
         # Push the results JSON into the relevant Redis queue
         self.send_to_queue(postfix, results, prefix="classification")
-    
+
     def run(self, testing=False):
         while True:
             self.retrieve_event()
@@ -87,7 +86,6 @@ class GitlabUserSpamClassifier(EventProcessor):
                 break
 
             time.sleep(0.2)
-
 
 
 def main():
