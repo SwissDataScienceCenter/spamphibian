@@ -40,6 +40,9 @@ app = Flask(__name__)
 metrics = PrometheusMetrics(app)
 CONTENT_TYPE_LATEST = str("text/plain; version=0.0.4; charset=utf-8")
 
+@app.route('/health', methods=['GET'])
+def health_check():
+    return "OK", 200
 
 @app.route("/verify_email", methods=["POST"])
 def verify_email():
