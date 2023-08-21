@@ -42,7 +42,14 @@ class GitlabUserSpamClassifier(EventProcessor):
             headers={"Content-Type": "application/json"},
         )
 
-        logging.debug(f"Classification service: response: {response}")
+        #print(response.status_code)
+
+        # Check if the request was successful
+        if response.status_code != 200:
+            logging.error(
+                f"Classification service: Unexpected status code {response.status_code} from prediction service. Response text: {response.text}"
+            )
+            return
 
         prediction = response.json()["prediction"]
 
@@ -62,10 +69,6 @@ class GitlabUserSpamClassifier(EventProcessor):
                 "prediction": prediction,
                 "score": score,
             }
-        )
-
-        logging.debug(
-            f"Classification service: results for event {postfix} by {data['username']}: prediction: {prediction}, scores: {score}"
         )
 
         logging.debug(
