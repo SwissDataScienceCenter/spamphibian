@@ -41,8 +41,12 @@ def create_app(app_name: str) -> Sanic:
         "event_type", "The number of times an event_type was received", ["event_type"]
     )
 
-    # Create Redis connection
-    redis_conn = redis.StrictRedis(host="localhost", port=6379, db=0)
+    REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
+    REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
+    REDIS_DB = int(os.environ.get("REDIS_DB", 0))
+    REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD")
+
+    redis_conn = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD)
 
     @app.route("/metrics")
     async def get_metrics(request):
@@ -130,7 +134,7 @@ def create_app(app_name: str) -> Sanic:
 def main():
     loader = AppLoader(factory=partial(create_app, "EventService"))
     app = loader.load()
-    app.prepare(port=8000, dev=True)
+    app.prepare(host='0.0.0.0', port=8000, dev=True)
     Sanic.serve(primary=app, app_loader=loader)
 
 

@@ -40,9 +40,11 @@ app = Flask(__name__)
 metrics = PrometheusMetrics(app)
 CONTENT_TYPE_LATEST = str("text/plain; version=0.0.4; charset=utf-8")
 
-@app.route('/health', methods=['GET'])
+
+@app.route("/health", methods=["GET"])
 def health_check():
     return "OK", 200
+
 
 @app.route("/verify_email", methods=["POST"])
 def verify_email():
@@ -250,8 +252,15 @@ def process_events(
 def main():
     Thread(target=app.run, kwargs={"port": 8001}).start()
 
+    REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
+    REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
+    REDIS_DB = int(os.environ.get("REDIS_DB", 0))
+    REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD")
+
     process_events(
-        redis_conn=redis.Redis(host="localhost", port=6379),
+        redis_conn=redis.Redis(
+            host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD
+        ),
         verified_users_file="verification_service/verified_users.yaml",
         verified_domains_file="verification_service/verified_domains.yaml",
         gitlab_url=os.getenv("GITLAB_URL"),
@@ -260,5 +269,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # Start the Flask server in a separate thread
     main()

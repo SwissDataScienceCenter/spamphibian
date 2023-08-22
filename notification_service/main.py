@@ -23,7 +23,6 @@ logging.basicConfig(
 
 
 def format_message(queue, data):
-
     event_data = data["event_data"]
     prediction = data["prediction"]
     score = data["score"]
@@ -281,10 +280,19 @@ class SlackNotifier(EventProcessor):
 
 
 def main(
-    r=redis.Redis(host="localhost", port=6379),
     slack_webhook_url=os.getenv("SLACK_WEBHOOK_URL"),
     testing=False,
 ):
+    # Get Redis connection details from environment variables, with fallbacks
+    REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+    REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+    REDIS_DB = int(os.getenv("REDIS_DB", 0))
+    REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None  # None if not set or empty
+
+    r = redis.Redis(
+        host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD
+    )
+
     notifier = SlackNotifier(slack_webhook_url, "classification", event_types, r)
 
     while True:

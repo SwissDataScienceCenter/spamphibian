@@ -15,9 +15,9 @@ def to_dense(x):
 
 
 def load_resources():
-    with open("models/users/preprocessing_pipeline.pkl", "rb") as f:
+    with open("users/preprocessing_pipeline.pkl", "rb") as f:
         pipeline = pickle.load(f)
-    loaded_model = tf.keras.models.load_model("models/users/keras_model.keras")
+    loaded_model = tf.keras.models.load_model("users/keras_model.keras")
     return pipeline, loaded_model
 
 
@@ -124,4 +124,4 @@ class UserSpamClassifier(Resource):
 api.add_resource(UserSpamClassifier, "/predict_user_create", "/predict_user_rename")
 
 if __name__ == "__main__":
-    app.run(port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5001, debug=True)

@@ -118,14 +118,27 @@ class GitlabRetrievalProcessor(EventProcessor):
 
 def main(
     GITLAB_URL=os.getenv("GITLAB_URL"),
-    GITLAB_ACCESS_TOKEN=os.environ.get("GITLAB_ACCESS_TOKEN"),
-    redis_conn=redis.Redis(host="localhost", port=6379, db=0),
+    GITLAB_ACCESS_TOKEN=os.getenv("GITLAB_ACCESS_TOKEN"),
     testing=False,
 ):
+
+    REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+    REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+    REDIS_DB = int(os.getenv("REDIS_DB", 0))
+    REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None
+
+    redis_conn = redis.Redis(
+        host=REDIS_HOST,
+        port=REDIS_PORT,
+        db=REDIS_DB,
+        password=REDIS_PASSWORD
+    )
+
     processor = GitlabRetrievalProcessor(
         GITLAB_URL, GITLAB_ACCESS_TOKEN, redis_conn=redis_conn, testing=testing
     )
     processor.run()
+
 
 
 if __name__ == "__main__":

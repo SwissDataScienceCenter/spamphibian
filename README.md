@@ -105,7 +105,7 @@ The following environment variables are required:
 - `GITLAB_TOKEN`: The token to use to authenticate with the GitLab instance, which must have admin privileges.
 - `SLACK_WEBHOOK_URL`: The URL of the Slack webhook to use to send notifications.
 
-Install the dependencies in `requirements.txt` using `pip install -r requirements.txt`. Beware the requirement for `tensorflow-macos`; replace it with `tensorflow` for other platforms.
+Install the dependencies in `requirements.txt` using `pip install -r requirements.txt`.
 
 A local Redis instance is required to run the service, which can be started using `docker run --env=ALLOW_EMPTY_PASSWORD=yes --runtime=runc -p 6379:6379 -d bitnami/redis:latest`, for example.
 

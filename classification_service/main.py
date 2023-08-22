@@ -3,6 +3,7 @@ import redis
 import time
 import logging
 import requests
+import os
 
 from common.constants import (
     project_events,
@@ -22,8 +23,9 @@ logging.basicConfig(
 
 
 class GitlabUserSpamClassifier(EventProcessor):
-    def __init__(self):
-        super().__init__("retrieval", user_events, redis_conn=None)
+    def __init__(self, redis_conn, base_url):
+        super().__init__("retrieval", user_events, redis_conn=redis_conn)
+        self.base_url = base_url
 
     def process_event(self, queue_name, data):
         logging.debug(f"Classification service: processing event {queue_name}")
@@ -33,8 +35,7 @@ class GitlabUserSpamClassifier(EventProcessor):
         # Convert dictionary to json
         data_json = json.dumps(data)
 
-        # Define the url for the prediction service
-        url = f"http://127.0.0.1:5000/predict_{postfix}"
+        url = f"{self.base_url}/predict_{postfix}"
 
         # Send the POST request
         response = requests.post(
@@ -73,15 +74,12 @@ class GitlabUserSpamClassifier(EventProcessor):
         logging.debug(
             f"Classification service: pushing results to Redis queue classification_{postfix}"
         )
-
-        # Push the results JSON into the relevant Redis queue
         self.send_to_queue(postfix, results, prefix="classification")
 
     def run(self, testing=False):
         while True:
             self.retrieve_event()
 
-            # If testing, break out of the infinite loop
             if testing:
                 break
 
@@ -89,7 +87,18 @@ class GitlabUserSpamClassifier(EventProcessor):
 
 
 def main():
-    classifier = GitlabUserSpamClassifier()
+    REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+    REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+    REDIS_DB = int(os.getenv("REDIS_DB", 0))
+    REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None
+
+    MODEL_URL = os.getenv("MODEL_URL", "http://127.0.0.1:5001")
+
+    r = redis.Redis(
+        host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD
+    )
+
+    classifier = GitlabUserSpamClassifier(redis_conn=r, base_url=MODEL_URL)
     classifier.run()
 
 
