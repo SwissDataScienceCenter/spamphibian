@@ -8,6 +8,9 @@ Spamphibian is in a very early development stage. It is a scalable and low-laten
   - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
   - [Installation](#installation)
+    - [Prerequisites](#prerequisites)
+    - [Installation Steps](#installation-steps)
+    - [Verification](#verification)
   - [Usage](#usage)
   - [Contributing](#contributing)
   - [License](#license)
@@ -93,11 +96,42 @@ This is the planned architecture of Spamphibian, but it is subject to change:
 
 ## Installation
 
-Coming soon!
+Ensure smooth sailing with `spamphibian` by following these concise steps.
+
+### Prerequisites
+
+- Ensure [Helm](https://helm.sh/) is installed.
+
+### Installation Steps
+
+1. Open your terminal.
+
+2. Deploy the Helm chart:
+
+   ```bash
+   helm install spamphibian https://path-to-public-helm-chart-repo -f your-values-file.yaml
+   ```
+
+   Replace `https://path-to-public-helm-chart-repo` with the chart repository URL and `your-values-file.yaml` with your customized configuration.
+
+3. Monitor the deployment:
+
+   ```bash
+   kubectl get pods -l app=spamphibian
+   ```
+
+### Verification
+
+- Validate GitLab with your URL and token.
+- Confirm Slack webhook is responsive.
+- Test accessibility of the model service via its hostname.
+- Check Redis with the provided credentials.
+
+Encounter issues? Refer to our troubleshooting guide or open an issue.
 
 ## Usage
 
-Spamphibian is in a very early development stage. It is not yet ready for production use and currently requires manual configuration and bespoke components to be built to get it working. The following steps are necessary to get it working:
+Spamphibian is not yet ready for production use and currently requires manual configuration and bespoke components to be built to get it working. The following steps are necessary to get it working:
 
 The following environment variables are required:
 
