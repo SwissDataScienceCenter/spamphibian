@@ -3,6 +3,7 @@ import logging
 import gitlab
 from time import sleep
 import os
+from prometheus_client import Counter, Histogram
 
 from common.constants import (
     project_events,
@@ -28,27 +29,31 @@ class GitlabRetrievalProcessor(EventProcessor):
         )
         self.testing = testing
 
+        self.event_processing_time= Histogram('retrieval_service_event_processing_seconds', 'Time taken to process an event')
+        self.events_processed = Counter('retrieval_service_events_processed_total', 'Total number of events processed')
+
     def process_event(self, queue_name, event_data):
-        event_type = queue_name.split("_", 1)[
-            -1
-        ]  # Split by the first underscore and get the event type
+        with self.event_processing_time.time():
+            event_type = queue_name.split("_", 1)[
+                -1
+            ]
 
-        # Process each event type
-        if event_type in user_events:
-            gitlab_object = self._process_user_event(event_data)
-        elif event_type in project_events:
-            gitlab_object = self._process_project_event(event_data)
-        elif event_type in issue_events:
-            gitlab_object = self._process_issue_event(event_data)
-        elif event_type in issue_note_events:
-            gitlab_object = self._process_issue_note_event(event_data)
-        elif event_type in group_events:
-            gitlab_object = self._process_group_event(event_data)
-        else:
-            logging.info(f"{self.__class__.__name__}: event {event_type} received")
-            return
+            if event_type in user_events:
+                gitlab_object = self._process_user_event(event_data)
+            elif event_type in project_events:
+                gitlab_object = self._process_project_event(event_data)
+            elif event_type in issue_events:
+                gitlab_object = self._process_issue_event(event_data)
+            elif event_type in issue_note_events:
+                gitlab_object = self._process_issue_note_event(event_data)
+            elif event_type in group_events:
+                gitlab_object = self._process_group_event(event_data)
+            else:
+                logging.info(f"{self.__class__.__name__}: event {event_type} received")
+                return
 
-        self.send_to_queue(event_type, gitlab_object, prefix="retrieval")
+            self.events_processed.inc()
+            self.send_to_queue(event_type, gitlab_object, prefix="retrieval")
 
     def _process_user_event(self, event_data):
         try:
@@ -109,7 +114,6 @@ class GitlabRetrievalProcessor(EventProcessor):
         while True:
             self.retrieve_event()
 
-            # If testing, break out of the infinite loop
             if self.testing:
                 break
 

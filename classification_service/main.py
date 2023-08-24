@@ -17,6 +17,8 @@ from common.constants import (
 
 from common.event_processor import EventProcessor
 
+from prometheus_client import multiprocess, CollectorRegistry, Counter, Histogram, Gauge
+
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
 )
@@ -26,6 +28,24 @@ class GitlabUserSpamClassifier(EventProcessor):
     def __init__(self, redis_conn, base_url):
         super().__init__("retrieval", user_events, redis_conn=redis_conn)
         self.base_url = base_url
+
+        prometheus_multiproc_dir = "prometheus_multiproc_dir"
+
+        os.makedirs(prometheus_multiproc_dir, exist_ok=True)
+
+        registry = CollectorRegistry()
+        multiprocess.MultiProcessCollector(registry)
+
+        self.score_histogram = Histogram('spam_classifier_scores', 'Spam score returned by spam classifier',
+            buckets=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+
+        self.request_latency = Histogram('spam_classifier_request_latency_seconds', 'Time taken for spam classifier to respond')
+
+        self.successful_requests = Counter('spam_classifier_successful_requests_total', 'Number of successful requests to spam classifier')
+
+        self.failed_requests = Counter('spam_classifier_failed_requests_total', 'Number of failed requests to spam classifier')
+
+        self.event_types = Counter('spam_classifier_event_types_total', 'Number of events processed by type', ['type'])
 
     def process_event(self, queue_name, data):
         logging.debug(f"Classification service: processing event {queue_name}")
@@ -37,23 +57,28 @@ class GitlabUserSpamClassifier(EventProcessor):
 
         url = f"{self.base_url}/predict_{postfix}"
 
-        # Send the POST request
-        response = requests.post(
-            url,
-            data=data_json,
-            headers={"Content-Type": "application/json"},
-        )
+        with self.request_latency.time():
+            response = requests.post(
+                url,
+                data=data_json,
+                headers={"Content-Type": "application/json"},
+            )
 
         # Check if the request was successful
         if response.status_code != 200:
+            self.failed_requests.inc()
             logging.error(
                 f"Classification service: Unexpected status code {response.status_code} from prediction service. Response text: {response.text}"
             )
             return
+        else:
+            self.successful_requests.inc()
 
         prediction = response.json()["prediction"]
 
         score = round(response.json()["score"], 3)
+
+        self.score_histogram.observe(score)
 
         results = {
             "event_data": data,
@@ -75,6 +100,8 @@ class GitlabUserSpamClassifier(EventProcessor):
             f"Classification service: pushing results to Redis queue classification_{postfix}"
         )
         self.send_to_queue(postfix, results, prefix="classification")
+
+        self.event_types.labels(type=postfix).inc()
 
     def run(self, testing=False):
         while True:

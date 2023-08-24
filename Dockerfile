@@ -18,11 +18,11 @@ ENV REDIS_PASSWORD=""
 ENV MODEL_URL="http://model_service:5001"
 ENV PYTHONPATH /app
 
-EXPOSE 8001
 EXPOSE 8000
-EXPOSE 5001
 
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+RUN chmod +x /app/check_services_health.sh
 
 ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

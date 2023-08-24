@@ -17,6 +17,8 @@ from common.constants import (
 
 from common.event_processor import EventProcessor
 
+from prometheus_client import generate_latest, multiprocess, CollectorRegistry, Counter, Histogram, Gauge
+
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
 )
@@ -267,16 +269,43 @@ class SlackNotifier(EventProcessor):
         super().__init__(queue_prefix, events, redis_conn)
         self.slack_webhook_url = slack_webhook_url
 
+        prometheus_multiproc_dir = "prometheus_multiproc_dir"
+
+        os.makedirs(prometheus_multiproc_dir, exist_ok=True)
+
+        registry = CollectorRegistry()
+        multiprocess.MultiProcessCollector(registry)
+
+        self.notification_counter = Counter(
+            "notification_service_notifications_total", "The number of times a notification has been sent", ["notification_endpoint"]
+        )
+
+        self.notification_failures_counter = Counter(
+            "notification_service_notification_failures_total", "The number of times a notification has failed to be sent", ["notification_endpoint"]
+        )
+        
+        self.notification_latency_histogram = Histogram(
+            "notification_service_notification_latency_seconds", "Time taken to send a notification"
+        )
+        
+        self.queue_size_gauge = Gauge(
+            "notification_service_queue_size", "Number of events waiting in the queue"
+        )
+
     def process_event(self, queue_name, data):
         data = format_message(queue_name, data)
-        response = requests.post(self.slack_webhook_url, json=data)
+
+        with self.notification_latency_histogram.time():
+            response = requests.post(self.slack_webhook_url, json=data)
 
         if response.status_code != 200:
             logging.debug(
                 f"Notification service: failed to send message to Slack: {response.content}"
             )
+            self.notification_failures_counter.labels(self.slack_webhook_url).inc()
         else:
             logging.debug("Notification service: successfully sent message to Slack")
+            self.notification_counter.labels(self.slack_webhook_url).inc()
 
 
 def main(

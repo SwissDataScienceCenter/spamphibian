@@ -1,0 +1,84 @@
+# Default values for spamphibian.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: spamphibian
+  pullPolicy: Never
+  tag: ""
+
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 8000
+
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+global:
+
+  gitlab:
+    url: "https://gitlab.com"
+    accessToken: "glpat-1234567890"
+
+  slack:
+    webhookURL: "https://hooks.slack.com/services/123456789/123456789"
+
+  modelService:
+    enabled: true
+    image: "spamphibian-model:0.0.1"
+    webhook:
+      hostname: "http://spamphibian-model"
+      port: 5001
+
+  redis:
+    host: "spamphibian-redis"
+    port: 6379
+    db: 0
+    password: ""

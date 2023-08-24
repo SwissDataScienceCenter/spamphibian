@@ -6,7 +6,7 @@ import redis
 import json
 from functools import partial
 import logging
-from prometheus_client import generate_latest, multiprocess, CollectorRegistry, Counter
+from prometheus_client import generate_latest, multiprocess, CollectorRegistry, Counter, Gauge, Histogram
 import os
 
 from common.constants import (
@@ -28,17 +28,24 @@ prometheus_multiproc_dir = "prometheus_multiproc_dir"
 if not os.path.exists(prometheus_multiproc_dir):
     os.makedirs(prometheus_multiproc_dir)
 
-os.environ["prometheus_multiproc_dir"] = prometheus_multiproc_dir
-
-
 def create_app(app_name: str) -> Sanic:
     app = Sanic(app_name)
 
     requests_counter = Counter(
-        "requests", "The number of times my API was accessed", ["method", "endpoint"]
+        "event_service_requests_total", "The number of times my API was accessed", ["method", "endpoint"]
     )
     event_types_counter = Counter(
-        "event_type", "The number of times an event_type was received", ["event_type"]
+        "event_service_event_types_total", "The number of times an event_type was received", ["event_type"]
+    )
+
+    event_errors = Counter(
+        "event_service_errors_total", "Number of errors encountered in the event service"
+    )
+    queue_size_gauge = Gauge(
+        "event_service_queue_size", "Size of the Redis event queue", ["queue_name"]
+    )
+    request_latency_histogram = Histogram(
+        "event_service_request_latency_seconds", "Time taken to handle and process incoming events"
     )
 
     REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
@@ -64,69 +71,72 @@ def create_app(app_name: str) -> Sanic:
 
     @app.post("/event")
     async def handle_event(request):
-        requests_counter.labels("POST", "/event").inc()
-        queue_name = ""
-        gitlab_event = request.json
+        with request_latency_histogram.time():
+            requests_counter.labels("POST", "/event").inc()
+            queue_name = ""
+            gitlab_event = request.json
 
-        # Determine the type of event
-        event_name = gitlab_event.get("event_name")
-        object_kind = gitlab_event.get("object_kind")
-        action = gitlab_event.get("object_attributes", {}).get("action")
+            # Determine the type of event
+            event_name = gitlab_event.get("event_name")
+            object_kind = gitlab_event.get("object_kind")
+            action = gitlab_event.get("object_attributes", {}).get("action")
 
-        logging.debug(f"Event service: received event: {event_name}")
+            logging.debug(f"Event service: received event: {event_name}")
 
-        # Project-related events
-        if (
-            event_name in project_events
-            or event_name in user_events
-            or event_name in group_events
-            or event_name in snippet_events
-        ):
-            queue_name = event_name
+            # Project-related events
+            if (
+                event_name in project_events
+                or event_name in user_events
+                or event_name in group_events
+                or event_name in snippet_events
+            ):
+                queue_name = event_name
 
-        # Issue-related events
-        elif object_kind == "issue" and action in ["open", "close", "reopen", "update"]:
-            queue_name = f"issue_{action}"
+            # Issue-related events
+            elif object_kind == "issue" and action in ["open", "close", "reopen", "update"]:
+                queue_name = f"issue_{action}"
 
-        # Note-related events
-        elif object_kind == "note":
-            try:
-                # Check if 'note' exists in 'object_attributes'
-                noteable_type = gitlab_event["object_attributes"]["noteable_type"]
-                # Check if 'noteable_type' is 'Issue'
-                if noteable_type == "Issue":
-                    # Check if 'created_at' and 'updated_at' are equal, meaning the note was just created
-                    if (
-                        gitlab_event["object_attributes"]["created_at"]
-                        == gitlab_event["object_attributes"]["updated_at"]
-                    ):
-                        queue_name = f"issue_note_create"
-                    else:
-                        queue_name = f"issue_note_update"
+            # Note-related events
+            elif object_kind == "note":
+                try:
+                    # Check if 'note' exists in 'object_attributes'
+                    noteable_type = gitlab_event["object_attributes"]["noteable_type"]
+                    # Check if 'noteable_type' is 'Issue'
+                    if noteable_type == "Issue":
+                        # Check if 'created_at' and 'updated_at' are equal, meaning the note was just created
+                        if (
+                            gitlab_event["object_attributes"]["created_at"]
+                            == gitlab_event["object_attributes"]["updated_at"]
+                        ):
+                            queue_name = f"issue_note_create"
+                        else:
+                            queue_name = f"issue_note_update"
 
-            except KeyError:
+                except KeyError:
+                    logging.debug(
+                        "Event service: object_attributes.note does not exist in gitlab_event"
+                    )
+
+            else:
                 logging.debug(
-                    "Event service: object_attributes.note does not exist in gitlab_event"
+                    f"Event service: unhandled event: {event_name if event_name else object_kind}"
                 )
 
-        else:
-            logging.debug(
-                f"Event service: unhandled event: {event_name if event_name else object_kind}"
-            )
+            event_types_counter.labels(queue_name).inc()
 
-        event_types_counter.labels(queue_name).inc()
+            queue_name = "event_" + queue_name
 
-        queue_name = "event_" + queue_name
+            try:
+                redis_conn.lpush(queue_name, json.dumps(gitlab_event))
+                logging.debug(f"Event service: pushed event to queue: {queue_name}")
+                queue_size_gauge.labels(queue_name).set(redis_conn.llen(queue_name))
+            except Exception as e:
+                logging.error(
+                    f"Event service: error pushing event to queue {queue_name}: {e}"
+                )
+                event_errors.inc()
 
-        try:
-            redis_conn.lpush(queue_name, json.dumps(gitlab_event))
-            logging.debug(f"Event service: pushed event to queue: {queue_name}")
-        except Exception as e:
-            logging.error(
-                f"Event service: error pushing event to queue {queue_name}: {e}"
-            )
-
-        return sanic_json({"message": "Event received"})
+            return sanic_json({"message": "Event received"})
 
     return app
 

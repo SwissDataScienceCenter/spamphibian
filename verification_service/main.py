@@ -5,10 +5,8 @@ import redis
 import requests
 import yaml
 from time import sleep
-from prometheus_client import Counter, Gauge, make_wsgi_app
+from prometheus_client import multiprocess, CollectorRegistry, Counter, Gauge
 from flask import Flask, request, jsonify
-from prometheus_flask_exporter import PrometheusMetrics
-from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from threading import Thread
 
 from common.event_processor import EventProcessor
@@ -27,24 +25,34 @@ logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
+prometheus_multiproc_dir = "prometheus_multiproc_dir"
+
+os.makedirs(prometheus_multiproc_dir, exist_ok=True)
+
+registry = CollectorRegistry()
+multiprocess.MultiProcessCollector(registry)
+
 # Define Prometheus metrics
 processed_events_total = Counter(
-    "processed_events_total", "Total number of processed events"
+    "verification_service_processed_events_total", "Total number of processed events"
 )
 verified_events_total = Counter(
-    "verified_events_total", "Total number of verified events"
+    "verification_service_verified_events_total", "Total number of verified events"
 )
-queue_length = Gauge("queue_length", "Current number of events in the queue")
+
+verification_failures_total = Counter(
+    "verification_service_verification_failures_total", "Total number of verification failures"
+)
+gitlab_api_calls_total = Counter(
+    "verification_service_gitlab_api_calls_total", "Total number of GitLab API calls", ["status"]
+)
+snippet_check_events_total = Counter(
+    "verification_service_snippet_check_events_total", "Total number of snippet check events processed"
+)
 
 app = Flask(__name__)
-metrics = PrometheusMetrics(app)
+
 CONTENT_TYPE_LATEST = str("text/plain; version=0.0.4; charset=utf-8")
-
-
-@app.route("/health", methods=["GET"])
-def health_check():
-    return "OK", 200
-
 
 @app.route("/verify_email", methods=["POST"])
 def verify_email():
@@ -73,10 +81,6 @@ def verify_email():
             "user_verified": user_verified,
         }
     )
-
-
-# Add prometheus wsgi middleware to route /metrics requests
-app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {"/metrics": make_wsgi_app()})
 
 
 def check_domain_verification(email, verified_domains_file):
@@ -162,6 +166,11 @@ class VerificationEventProcessor(EventProcessor):
                 headers={"PRIVATE-TOKEN": f"{self.gitlab_access_token}"},
             )
 
+            if response.status_code == 200:
+                gitlab_api_calls_total.labels("success").inc()
+            else:
+                gitlab_api_calls_total.labels("failure").inc()
+
             try:
                 group_members = response.json()
             except ValueError:
@@ -215,8 +224,10 @@ class VerificationEventProcessor(EventProcessor):
             logging.info(
                 f"Verification service: snippet check event type received, individual snippet verification will be done at a later point by the GitLab Item Retrieval Service. Passing event to the next queue."
             )
+            snippet_check_events_total.inc()
 
         if not user_verified:
+            verification_failures_total.inc()
             self.send_to_queue(event_type, data, prefix="verification")
             logging.debug(
                 f"Verification service: pushed event to queue: verification_{event_type}"

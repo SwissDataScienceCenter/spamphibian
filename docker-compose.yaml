@@ -9,9 +9,7 @@ services:
       REDIS_PASSWORD: ""
 
   spamphibian:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: spamphibian:0.0.1
     environment:
       GITLAB_URL: ""
       GITLAB_ACCESS_TOKEN: ""
@@ -25,12 +23,9 @@ services:
     depends_on:
       - redis
     ports:
-      - "8001:8001"
       - "8000:8000"
 
   model_service:
-    build:
-      context: ./models
-      dockerfile: Dockerfile
+    image: spamphibian-model:0.0.1
     ports:
       - "5001:5001"
