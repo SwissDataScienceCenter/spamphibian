@@ -55,7 +55,7 @@ spec:
       volumes:
       - name: verified-domains-config
         configMap:
-          name: {{ include "chart.fullname" . }}-verified-domains-config
+          name: {{ include "spamphibian.fullname" . }}-verified-domains-config
       - name: verified-users-config
         configMap:
-          name: {{ include "chart.fullname" . }}-verified-users-config
+          name: {{ include "spamphibian.fullname" . }}-verified-users-config

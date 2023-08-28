@@ -12,3 +12,4 @@ docker-compose.yaml
 test.py
 verified_users.yaml
 verified_domains.yaml
+verified_domains_sdsc.yaml
