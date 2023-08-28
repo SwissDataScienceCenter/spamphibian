@@ -39,9 +39,23 @@ spec:
         ports:
         - name: http
           containerPort: 8000
+        volumeMounts:
+        - name: verified-domains-config
+          mountPath: /app/verification_service/verified_domains.yaml
+          subPath: verified_domains.yaml
+        - name: verified-users-config
+          mountPath: /app/verification_service/verified_users.yaml
+          subPath: verified_users.yaml
         readinessProbe:
           exec:
             command:
             - /app/check_services_health.sh
           initialDelaySeconds: 10
           periodSeconds: 5
+      volumes:
+      - name: verified-domains-config
+        configMap:
+          name: {{ include "chart.fullname" . }}-verified-domains-config
+      - name: verified-users-config
+        configMap:
+          name: {{ include "chart.fullname" . }}-verified-users-config

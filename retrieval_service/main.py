@@ -21,6 +21,7 @@ logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
+
 class GitlabRetrievalProcessor(EventProcessor):
     def __init__(self, GITLAB_URL, GITLAB_ACCESS_TOKEN, redis_conn=None, testing=False):
         super().__init__("verification", event_types, redis_conn)
@@ -29,14 +30,18 @@ class GitlabRetrievalProcessor(EventProcessor):
         )
         self.testing = testing
 
-        self.event_processing_time= Histogram('retrieval_service_event_processing_seconds', 'Time taken to process an event')
-        self.events_processed = Counter('retrieval_service_events_processed_total', 'Total number of events processed')
+        self.event_processing_time = Histogram(
+            "retrieval_service_event_processing_seconds",
+            "Time taken to process an event",
+        )
+        self.events_processed = Counter(
+            "retrieval_service_events_processed_total",
+            "Total number of events processed",
+        )
 
     def process_event(self, queue_name, event_data):
         with self.event_processing_time.time():
-            event_type = queue_name.split("_", 1)[
-                -1
-            ]
+            event_type = queue_name.split("_", 1)[-1]
 
             if event_type in user_events:
                 gitlab_object = self._process_user_event(event_data)
@@ -123,27 +128,28 @@ class GitlabRetrievalProcessor(EventProcessor):
 def main(
     GITLAB_URL=os.getenv("GITLAB_URL"),
     GITLAB_ACCESS_TOKEN=os.getenv("GITLAB_ACCESS_TOKEN"),
+    redis_conn=None,
     testing=False,
 ):
-
-    REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-    REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
-    REDIS_DB = int(os.getenv("REDIS_DB", 0))
-    REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None
-
-    redis_conn = redis.Redis(
-        host=REDIS_HOST,
-        port=REDIS_PORT,
-        db=REDIS_DB,
-        password=REDIS_PASSWORD
-    )
-
     processor = GitlabRetrievalProcessor(
         GITLAB_URL, GITLAB_ACCESS_TOKEN, redis_conn=redis_conn, testing=testing
     )
     processor.run()
 
 
-
 if __name__ == "__main__":
-    main()
+    REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+    REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+    REDIS_DB = int(os.getenv("REDIS_DB", 0))
+    REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None  # None if not set or empty
+
+    r = redis.Redis(
+        host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD
+    )
+
+    main(
+        GITLAB_URL=os.getenv("GITLAB_URL"),
+        GITLAB_ACCESS_TOKEN=os.getenv("GITLAB_ACCESS_TOKEN"),
+        redis_conn=r,
+        testing=False,
+    )

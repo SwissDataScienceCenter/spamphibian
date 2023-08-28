@@ -26,7 +26,12 @@ class TestService(unittest.TestCase):
 
         redis_conn.lpush("verification_user_create", json.dumps({"user_id": "123"}))
 
-        main("https://gitlab.com", "token", redis_conn, testing=True)
+        main(
+            GITLAB_URL="https://gitlab.com",
+            GITLAB_ACCESS_TOKEN="token",
+            redis_conn=redis_conn,
+            testing=True,
+        )
 
         mock_gitlab.assert_called_once_with("https://gitlab.com", private_token="token")
         mock_gl.users.get.assert_called_once_with("123")

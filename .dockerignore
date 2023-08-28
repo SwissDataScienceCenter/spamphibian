@@ -1,0 +1,14 @@
+/helm-chart
+/prometheus_multiproc_dir
+/train_model
+/models
+.vscode
+.pytest_cache
+__pycache__
+README.md
+LICENCE
+.gitignore
+docker-compose.yaml
+test.py
+verified_users.yaml
+verified_domains.yaml

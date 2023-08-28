@@ -36,16 +36,32 @@ class GitlabUserSpamClassifier(EventProcessor):
         registry = CollectorRegistry()
         multiprocess.MultiProcessCollector(registry)
 
-        self.score_histogram = Histogram('spam_classifier_scores', 'Spam score returned by spam classifier',
-            buckets=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+        self.score_histogram = Histogram(
+            "spam_classifier_scores",
+            "Spam score returned by spam classifier",
+            buckets=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+        )
 
-        self.request_latency = Histogram('spam_classifier_request_latency_seconds', 'Time taken for spam classifier to respond')
+        self.request_latency = Histogram(
+            "spam_classifier_request_latency_seconds",
+            "Time taken for spam classifier to respond",
+        )
 
-        self.successful_requests = Counter('spam_classifier_successful_requests_total', 'Number of successful requests to spam classifier')
+        self.successful_requests = Counter(
+            "spam_classifier_successful_requests_total",
+            "Number of successful requests to spam classifier",
+        )
 
-        self.failed_requests = Counter('spam_classifier_failed_requests_total', 'Number of failed requests to spam classifier')
+        self.failed_requests = Counter(
+            "spam_classifier_failed_requests_total",
+            "Number of failed requests to spam classifier",
+        )
 
-        self.event_types = Counter('spam_classifier_event_types_total', 'Number of events processed by type', ['type'])
+        self.event_types = Counter(
+            "spam_classifier_event_types_total",
+            "Number of events processed by type",
+            ["type"],
+        )
 
     def process_event(self, queue_name, data):
         logging.debug(f"Classification service: processing event {queue_name}")

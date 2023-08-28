@@ -19,13 +19,16 @@ class TestGitlabUserSpamClassifier(unittest.TestCase):
         mock_redis.return_value = redis_conn
 
         mock_response = MagicMock()
+        mock_response.status_code = 200
         mock_response.json.return_value = {"prediction": "spam", "score": 0.9}
         mock_requests_post.return_value = mock_response
 
-        classifier = GitlabUserSpamClassifier()
+        classifier = GitlabUserSpamClassifier(
+            redis_conn=redis_conn, base_url="http://test-model-url"
+        )
         classifier.run(testing=True)
 
-        expected_url = "http://127.0.0.1:5000/predict_user_create"
+        expected_url = "http://test-model-url/predict_user_create"
         expected_data = json.dumps({"username": "test_user", "some_data": "data"})
 
         mock_requests_post.assert_called_once_with(

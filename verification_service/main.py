@@ -41,18 +41,23 @@ verified_events_total = Counter(
 )
 
 verification_failures_total = Counter(
-    "verification_service_verification_failures_total", "Total number of verification failures"
+    "verification_service_verification_failures_total",
+    "Total number of verification failures",
 )
 gitlab_api_calls_total = Counter(
-    "verification_service_gitlab_api_calls_total", "Total number of GitLab API calls", ["status"]
+    "verification_service_gitlab_api_calls_total",
+    "Total number of GitLab API calls",
+    ["status"],
 )
 snippet_check_events_total = Counter(
-    "verification_service_snippet_check_events_total", "Total number of snippet check events processed"
+    "verification_service_snippet_check_events_total",
+    "Total number of snippet check events processed",
 )
 
 app = Flask(__name__)
 
 CONTENT_TYPE_LATEST = str("text/plain; version=0.0.4; charset=utf-8")
+
 
 @app.route("/verify_email", methods=["POST"])
 def verify_email():

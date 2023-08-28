@@ -56,7 +56,7 @@ class TestSlackNotifier(unittest.TestCase):
         redis_conn.lpush(queue, message)
 
         # Call the function
-        main(r=redis_conn, slack_webhook_url="http://slack.com", testing=True)
+        main(redis_conn=redis_conn, slack_webhook_url="http://slack.com", testing=True)
 
         # Assert that the function made a post request with the expected payload
         mock_post.assert_called_once_with("http://slack.com", json=expected_response)

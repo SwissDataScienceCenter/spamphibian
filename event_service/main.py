@@ -6,7 +6,14 @@ import redis
 import json
 from functools import partial
 import logging
-from prometheus_client import generate_latest, multiprocess, CollectorRegistry, Counter, Gauge, Histogram
+from prometheus_client import (
+    generate_latest,
+    multiprocess,
+    CollectorRegistry,
+    Counter,
+    Gauge,
+    Histogram,
+)
 import os
 
 from common.constants import (
@@ -28,24 +35,31 @@ prometheus_multiproc_dir = "prometheus_multiproc_dir"
 if not os.path.exists(prometheus_multiproc_dir):
     os.makedirs(prometheus_multiproc_dir)
 
+
 def create_app(app_name: str) -> Sanic:
     app = Sanic(app_name)
 
     requests_counter = Counter(
-        "event_service_requests_total", "The number of times my API was accessed", ["method", "endpoint"]
+        "event_service_requests_total",
+        "The number of times my API was accessed",
+        ["method", "endpoint"],
     )
     event_types_counter = Counter(
-        "event_service_event_types_total", "The number of times an event_type was received", ["event_type"]
+        "event_service_event_types_total",
+        "The number of times an event_type was received",
+        ["event_type"],
     )
 
     event_errors = Counter(
-        "event_service_errors_total", "Number of errors encountered in the event service"
+        "event_service_errors_total",
+        "Number of errors encountered in the event service",
     )
     queue_size_gauge = Gauge(
         "event_service_queue_size", "Size of the Redis event queue", ["queue_name"]
     )
     request_latency_histogram = Histogram(
-        "event_service_request_latency_seconds", "Time taken to handle and process incoming events"
+        "event_service_request_latency_seconds",
+        "Time taken to handle and process incoming events",
     )
 
     REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
@@ -53,7 +67,9 @@ def create_app(app_name: str) -> Sanic:
     REDIS_DB = int(os.environ.get("REDIS_DB", 0))
     REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD")
 
-    redis_conn = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD)
+    redis_conn = redis.StrictRedis(
+        host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD
+    )
 
     @app.route("/metrics")
     async def get_metrics(request):
@@ -93,7 +109,12 @@ def create_app(app_name: str) -> Sanic:
                 queue_name = event_name
 
             # Issue-related events
-            elif object_kind == "issue" and action in ["open", "close", "reopen", "update"]:
+            elif object_kind == "issue" and action in [
+                "open",
+                "close",
+                "reopen",
+                "update",
+            ]:
                 queue_name = f"issue_{action}"
 
             # Note-related events
@@ -144,7 +165,7 @@ def create_app(app_name: str) -> Sanic:
 def main():
     loader = AppLoader(factory=partial(create_app, "EventService"))
     app = loader.load()
-    app.prepare(host='0.0.0.0', port=8000, dev=True)
+    app.prepare(host="0.0.0.0", port=8000, dev=True)
     Sanic.serve(primary=app, app_loader=loader)
 
 

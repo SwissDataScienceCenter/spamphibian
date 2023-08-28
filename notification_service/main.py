@@ -17,7 +17,14 @@ from common.constants import (
 
 from common.event_processor import EventProcessor
 
-from prometheus_client import generate_latest, multiprocess, CollectorRegistry, Counter, Histogram, Gauge
+from prometheus_client import (
+    generate_latest,
+    multiprocess,
+    CollectorRegistry,
+    Counter,
+    Histogram,
+    Gauge,
+)
 
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -277,17 +284,22 @@ class SlackNotifier(EventProcessor):
         multiprocess.MultiProcessCollector(registry)
 
         self.notification_counter = Counter(
-            "notification_service_notifications_total", "The number of times a notification has been sent", ["notification_endpoint"]
+            "notification_service_notifications_total",
+            "The number of times a notification has been sent",
+            ["notification_endpoint"],
         )
 
         self.notification_failures_counter = Counter(
-            "notification_service_notification_failures_total", "The number of times a notification has failed to be sent", ["notification_endpoint"]
+            "notification_service_notification_failures_total",
+            "The number of times a notification has failed to be sent",
+            ["notification_endpoint"],
         )
-        
+
         self.notification_latency_histogram = Histogram(
-            "notification_service_notification_latency_seconds", "Time taken to send a notification"
+            "notification_service_notification_latency_seconds",
+            "Time taken to send a notification",
         )
-        
+
         self.queue_size_gauge = Gauge(
             "notification_service_queue_size", "Number of events waiting in the queue"
         )
@@ -310,8 +322,21 @@ class SlackNotifier(EventProcessor):
 
 def main(
     slack_webhook_url=os.getenv("SLACK_WEBHOOK_URL"),
+    redis_conn=None,
     testing=False,
 ):
+    notifier = SlackNotifier(
+        slack_webhook_url, "classification", event_types, redis_conn=redis_conn
+    )
+
+    while True:
+        notifier.retrieve_event()
+
+        if testing:
+            break
+
+
+if __name__ == "__main__":
     # Get Redis connection details from environment variables, with fallbacks
     REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
     REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
@@ -322,14 +347,8 @@ def main(
         host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD
     )
 
-    notifier = SlackNotifier(slack_webhook_url, "classification", event_types, r)
-
-    while True:
-        notifier.retrieve_event()
-
-        if testing:
-            break
-
-
-if __name__ == "__main__":
-    main()
+    main(
+        slack_webhook_url=os.getenv("SLACK_WEBHOOK_URL"),
+        redis_conn=r,
+        testing=False,
+    )

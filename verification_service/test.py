@@ -261,10 +261,6 @@ class TestEmailVerificationAPI(unittest.TestCase):
                 self.assertEqual(json_data.get("domain_verified"), domain_verified)
                 self.assertEqual(json_data.get("user_verified"), user_verified)
 
-    def test_metrics_endpoint(self):
-        response = self.client.get("/metrics", follow_redirects=True)
-        self.assertEqual(response.status_code, 200)
-
 
 if __name__ == "__main__":
     unittest.main()

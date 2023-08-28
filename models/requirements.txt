@@ -2,7 +2,5 @@ Flask
 Flask-RESTful
 pandas
 tensorflow==2.11.0
-Sanic
-redis
 scikit-learn
 scikeras
