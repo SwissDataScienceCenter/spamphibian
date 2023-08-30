@@ -277,10 +277,17 @@ def main():
     REDIS_DB = int(os.environ.get("REDIS_DB", 0))
     REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD")
 
-    process_events(
-        redis_conn=redis.Redis(
+    try:
+        r = redis.Redis(
             host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD
-        ),
+        )
+        r.ping()
+    except redis.exceptions.ConnectionError as e:
+        logging.error(f"Error connecting to Redis: {e}")
+        exit(1)
+
+    process_events(
+        redis_conn=r,
         verified_users_file="verification_service/verified_users.yaml",
         verified_domains_file="verification_service/verified_domains.yaml",
         gitlab_url=os.getenv("GITLAB_URL"),

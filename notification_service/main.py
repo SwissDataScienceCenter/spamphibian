@@ -343,9 +343,14 @@ if __name__ == "__main__":
     REDIS_DB = int(os.getenv("REDIS_DB", 0))
     REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None  # None if not set or empty
 
-    r = redis.Redis(
-        host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD
-    )
+    try:
+        r = redis.Redis(
+            host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD
+        )
+        r.ping()
+    except redis.exceptions.ConnectionError as e:
+        logging.error(f"Error connecting to Redis: {e}")
+        exit(1)
 
     main(
         slack_webhook_url=os.getenv("SLACK_WEBHOOK_URL"),

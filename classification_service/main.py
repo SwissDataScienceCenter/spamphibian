@@ -137,9 +137,14 @@ def main():
 
     MODEL_URL = os.getenv("MODEL_URL", "http://127.0.0.1:5001")
 
-    r = redis.Redis(
-        host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD
-    )
+    try:
+        r = redis.Redis(
+            host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD
+        )
+        r.ping()
+    except redis.exceptions.ConnectionError as e:
+        logging.error(f"Error connecting to Redis: {e}")
+        exit(1)
 
     classifier = GitlabUserSpamClassifier(redis_conn=r, base_url=MODEL_URL)
     classifier.run()

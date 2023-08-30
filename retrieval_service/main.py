@@ -1,4 +1,5 @@
 import redis
+import redis.exceptions
 import logging
 import gitlab
 from time import sleep
@@ -141,12 +142,17 @@ if __name__ == "__main__":
     REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
     REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
     REDIS_DB = int(os.getenv("REDIS_DB", 0))
-    REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None  # None if not set or empty
+    REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None
 
-    r = redis.Redis(
-        host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD
-    )
-
+    try:
+        r = redis.Redis(
+            host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD
+        )
+        r.ping()
+    except redis.exceptions.ConnectionError as e:
+        logging.error(f"Error connecting to Redis: {e}")
+        exit(1)
+    
     main(
         GITLAB_URL=os.getenv("GITLAB_URL"),
         GITLAB_ACCESS_TOKEN=os.getenv("GITLAB_ACCESS_TOKEN"),

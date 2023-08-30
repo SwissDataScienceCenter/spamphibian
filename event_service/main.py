@@ -67,9 +67,14 @@ def create_app(app_name: str) -> Sanic:
     REDIS_DB = int(os.environ.get("REDIS_DB", 0))
     REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD")
 
-    redis_conn = redis.StrictRedis(
-        host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD
-    )
+    try:
+        redis_conn = redis.Redis(
+            host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD
+        )
+        redis_conn.ping()
+    except redis.exceptions.ConnectionError as e:
+        logging.error(f"Error connecting to Redis: {e}")
+        exit(1)
 
     @app.route("/metrics")
     async def get_metrics(request):
