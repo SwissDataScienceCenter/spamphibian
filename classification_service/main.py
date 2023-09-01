@@ -140,6 +140,14 @@ def main():
 
     sentinel_hosts = [tuple(x.split(":")) for x in REDIS_SENTINEL_HOSTS.split(",")]
 
+    logging.debug("Redis config:")
+    logging.debug(f"REDIS_SENTINEL_ENABLED: {REDIS_SENTINEL_ENABLED}")
+    logging.debug(f"REDIS_SENTINEL_HOSTS: {REDIS_SENTINEL_HOSTS}")
+    logging.debug(f"REDIS_HOST: {REDIS_HOST}")
+    logging.debug(f"REDIS_PORT: {REDIS_PORT}")
+    logging.debug(f"REDIS_DB: {REDIS_DB}")
+    logging.debug(f"REDIS_PASSWORD: {REDIS_PASSWORD}")
+
     if REDIS_SENTINEL_ENABLED:
         try:
             sentinel = redis.Sentinel(
