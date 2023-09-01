@@ -140,7 +140,8 @@ def main(
 
 if __name__ == "__main__":
     REDIS_SENTINEL_ENABLED = os.getenv("REDIS_SENTINEL_ENABLED", "False") == "True"
-    REDIS_SENTINEL_HOSTS = os.getenv("REDIS_SENTINEL_HOSTS", "")
+    REDIS_SENTINEL_HOSTS = os.getenv("REDIS_SENTINEL_HOSTS") or None
+    REDIS_SENTINEL_PASSWORD = os.getenv("REDIS_SENTINEL_PASSWORD") or None
     REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
     REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
     REDIS_DB = int(os.getenv("REDIS_DB", 0))
@@ -150,18 +151,28 @@ if __name__ == "__main__":
 
     if REDIS_SENTINEL_ENABLED:
         try:
+            sentinel_kwargs = {}
+            master_for_kwargs = {"db": REDIS_DB}
+
+            if REDIS_PASSWORD:
+                master_for_kwargs["password"] = REDIS_PASSWORD
+
+            if REDIS_SENTINEL_PASSWORD:
+                sentinel_kwargs["password"] = REDIS_SENTINEL_PASSWORD
+
             sentinel = redis.Sentinel(
                 sentinel_hosts,
-                sentinel_kwargs={"password": REDIS_PASSWORD},
+                sentinel_kwargs=sentinel_kwargs,
             )
 
             master_info = sentinel.sentinel_masters()
             first_master_name = list(master_info.keys())[0]
 
             r = sentinel.master_for(
-                first_master_name, db=REDIS_DB, password=REDIS_PASSWORD
+                first_master_name,
+                **master_for_kwargs
             )
-            
+
             r.ping()
             logging.info(f"Successfully connected to master: {first_master_name}")
 
