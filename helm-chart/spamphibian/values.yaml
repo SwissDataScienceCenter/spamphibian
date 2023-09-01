@@ -75,9 +75,34 @@ global:
     webhook:
       hostname: "http://spamphibian-model"
       port: 5001
+    imagePullSecrets:
+      enabled: true
+      name: my-registry-creds
+      dockerConfigJson: "<base64 encoded ~/.docker/config.json>"
 
   redis:
-    host: "spamphibian-redis"
-    port: 6379
     db: 0
     password: ""
+    usePasswordSecret: false
+    passwordSecretName: ""
+    passwordSecretKey: ""
+
+    # Flag to toggle between standalone and sentinel
+    useSentinel: false
+
+    # Regular Redis Configuration
+    standalone:
+      host: "spamphibian-redis"
+      port: 6379
+
+    # Sentinel Configuration
+    sentinel:
+      hosts:
+      - host: gitlab-redis-node-0.gitlab-redis-headless.gitlab.svc.cluster.local
+        port: 26379
+      - host: gitlab-redis-node-1.gitlab-redis-headless.gitlab.svc.cluster.local
+        port: 26379
+      - host: gitlab-redis-node-2.gitlab-redis-headless.gitlab.svc.cluster.local
+        port: 26379
+
+

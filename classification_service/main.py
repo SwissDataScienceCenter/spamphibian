@@ -4,6 +4,7 @@ import time
 import logging
 import requests
 import os
+import time
 
 from common.constants import (
     project_events,
@@ -130,23 +131,48 @@ class GitlabUserSpamClassifier(EventProcessor):
 
 
 def main():
+    REDIS_SENTINEL_ENABLED = os.getenv("REDIS_SENTINEL_ENABLED", "False") == "True"
+    REDIS_SENTINEL_HOSTS = os.getenv("REDIS_SENTINEL_HOSTS", "")
     REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
     REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
     REDIS_DB = int(os.getenv("REDIS_DB", 0))
     REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None
 
-    MODEL_URL = os.getenv("MODEL_URL", "http://127.0.0.1:5001")
+    sentinel_hosts = [tuple(x.split(":")) for x in REDIS_SENTINEL_HOSTS.split(",")]
+
+    if REDIS_SENTINEL_ENABLED:
+        try:
+            sentinel = redis.Sentinel(
+                sentinel_hosts,
+                sentinel_kwargs={"password": REDIS_PASSWORD},
+            )
+
+            master_info = sentinel.sentinel_masters()
+            first_master_name = list(master_info.keys())[0]
+
+            r = sentinel.master_for(
+                first_master_name, db=REDIS_DB, password=REDIS_PASSWORD
+            )
+            
+            r.ping()
+            logging.info(f"Successfully connected to master: {first_master_name}")
+
+        except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
+            logging.error(f"Could not connect to any sentinel. Error: {e}")
+            exit(1)
+
+    else:
+        r = redis.Redis(
+                host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD
+            )
 
     try:
-        r = redis.Redis(
-            host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD
-        )
         r.ping()
     except redis.exceptions.ConnectionError as e:
         logging.error(f"Error connecting to Redis: {e}")
         exit(1)
 
-    classifier = GitlabUserSpamClassifier(redis_conn=r, base_url=MODEL_URL)
+    classifier = GitlabUserSpamClassifier(redis_conn=r, base_url=os.getenv("MODEL_URL", "http://127.0.0.1:5001"))
     classifier.run()
 
 

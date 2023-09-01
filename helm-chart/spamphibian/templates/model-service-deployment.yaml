@@ -13,6 +13,10 @@ spec:
       labels:
         app: {{ include "spamphibian.name" . }}-model
     spec:
+      {{ if .Values.global.modelService.enabled }}
+      imagePullSecrets:
+      - name: {{ .Values.global.modelService.imagePullSecrets.name }}
+      {{ end }}
       containers:
       - name: model
         image: {{ .Values.global.modelService.image }}

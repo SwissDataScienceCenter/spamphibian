@@ -62,16 +62,44 @@ def create_app(app_name: str) -> Sanic:
         "Time taken to handle and process incoming events",
     )
 
-    REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
-    REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
-    REDIS_DB = int(os.environ.get("REDIS_DB", 0))
-    REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD")
+    # Redis connection
+    REDIS_SENTINEL_ENABLED = os.getenv("REDIS_SENTINEL_ENABLED", "False") == "True"
+    REDIS_SENTINEL_HOSTS = os.getenv("REDIS_SENTINEL_HOSTS", "")
+    REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+    REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+    REDIS_DB = int(os.getenv("REDIS_DB", 0))
+    REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None
+
+    sentinel_hosts = [tuple(x.split(":")) for x in REDIS_SENTINEL_HOSTS.split(",")]
+
+    if REDIS_SENTINEL_ENABLED:
+        try:
+            sentinel = redis.Sentinel(
+                sentinel_hosts,
+                sentinel_kwargs={"password": REDIS_PASSWORD},
+            )
+
+            master_info = sentinel.sentinel_masters()
+            first_master_name = list(master_info.keys())[0]
+
+            r = sentinel.master_for(
+                first_master_name, db=REDIS_DB, password=REDIS_PASSWORD
+            )
+            
+            r.ping()
+            logging.info(f"Successfully connected to master: {first_master_name}")
+
+        except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
+            logging.error(f"Could not connect to any sentinel. Error: {e}")
+            exit(1)
+
+    else:
+        r = redis.Redis(
+                host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD
+            )
 
     try:
-        redis_conn = redis.Redis(
-            host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD
-        )
-        redis_conn.ping()
+        r.ping()
     except redis.exceptions.ConnectionError as e:
         logging.error(f"Error connecting to Redis: {e}")
         exit(1)
@@ -153,9 +181,9 @@ def create_app(app_name: str) -> Sanic:
             queue_name = "event_" + queue_name
 
             try:
-                redis_conn.lpush(queue_name, json.dumps(gitlab_event))
+                r.lpush(queue_name, json.dumps(gitlab_event))
                 logging.debug(f"Event service: pushed event to queue: {queue_name}")
-                queue_size_gauge.labels(queue_name).set(redis_conn.llen(queue_name))
+                queue_size_gauge.labels(queue_name).set(r.llen(queue_name))
             except Exception as e:
                 logging.error(
                     f"Event service: error pushing event to queue {queue_name}: {e}"
