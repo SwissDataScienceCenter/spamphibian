@@ -168,7 +168,7 @@ def main():
 
             for sentinel_host, sentinel_port in sentinel_hosts:
                 try:
-                    sentinel_server = redis.Redis(host=sentinel_host, port=sentinel_port, sentinel_kwargs=sentinel_kwargs)
+                    sentinel_server = redis.Redis(host=sentinel_host, port=sentinel_port, password=REDIS_SENTINEL_PASSWORD)
                     masters = sentinel_server.sentinel('masters')
                     break
                 except Exception as e:
