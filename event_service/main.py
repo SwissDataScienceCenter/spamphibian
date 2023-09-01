@@ -64,6 +64,7 @@ def create_app(app_name: str) -> Sanic:
 
     # Redis connection
     REDIS_SENTINEL_ENABLED = os.getenv("REDIS_SENTINEL_ENABLED", "False") == "True"
+    REDIS_MASTER_SET = os.getenv("REDIS_MASTER_SET") or "mymaster"
     REDIS_SENTINEL_HOSTS = os.getenv("REDIS_SENTINEL_HOSTS") or None
     REDIS_SENTINEL_PASSWORD = os.getenv("REDIS_SENTINEL_PASSWORD") or None
     REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
@@ -85,25 +86,16 @@ def create_app(app_name: str) -> Sanic:
                 sentinel_kwargs["password"] = REDIS_SENTINEL_PASSWORD
 
             sentinel = redis.Sentinel(
-                sentinel_hosts,
+                [sentinel_hosts[0]],
                 sentinel_kwargs=sentinel_kwargs,
             )
 
-            master_info = sentinel.sentinel_masters()
-
-            if not isinstance(master_info, dict):
-                logging.error(f"Expected a dictionary for master_info but got: {type(master_info)}: {master_info}")
-                exit(1)
-
-            first_master_name = list(master_info.keys())[0]
-
             r = sentinel.master_for(
-                first_master_name,
-                **master_for_kwargs
+                REDIS_MASTER_SET, **master_for_kwargs
             )
 
             r.ping()
-            logging.info(f"Successfully connected to master: {first_master_name}")
+            logging.info(f"Successfully connected to Redis sentinel: {sentinel_hosts[0]}")
 
         except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
             logging.error(f"Could not connect to any sentinel. Error: {e}")

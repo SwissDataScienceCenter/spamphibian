@@ -51,6 +51,8 @@ spec:
           {{- else }}
           value: "False"
           {{- end }}
+        - name: REDIS_MASTER_SET
+          value: "{{ .Values.global.redis.sentinel.masterSet }}"
         ports:
         - name: http
           containerPort: 8000
