@@ -301,7 +301,7 @@ def main():
             master_info = sentinel.sentinel_masters()
 
             if not isinstance(master_info, dict):
-                logging.error(f"Expected a dictionary for master_info but got: {type(master_info)}")
+                logging.error(f"Expected a dictionary for master_info but got: {type(master_info)}: {master_info}")
                 exit(1)
 
             first_master_name = list(master_info.keys())[0]
