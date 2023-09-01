@@ -166,21 +166,32 @@ def main():
                 sentinel_kwargs=sentinel_kwargs,
             )
 
-            master_info = sentinel.sentinel_masters()
-
-            if not isinstance(master_info, dict):
-                logging.error(f"Expected a dictionary for master_info but got: {type(master_info)}: {master_info}")
+            for sentinel_host, sentinel_port in sentinel_hosts:
+                try:
+                    sentinel_server = redis.Redis(host=sentinel_host, port=sentinel_port, sentinel_kwargs=sentinel_kwargs)
+                    masters = sentinel_server.sentinel('masters')
+                    break
+                except Exception as e:
+                    logging.warning(f"Could not get master info from Sentinel at {sentinel_host}:{sentinel_port}, {e}")
+            else:
+                logging.error("Could not get master info from any Sentinel.")
                 exit(1)
 
-            first_master_name = list(master_info.keys())[0]
+            # if not isinstance(master_info, dict):
+            #     logging.error(f"Expected a dictionary for master_info but got: {type(master_info)}: {master_info}")
+            #     exit(1)
+
+            first_master_name = list(masters.keys())[0]
+            master_host, master_port = masters[first_master_name]['ip'], masters[first_master_name]['port']
 
             r = sentinel.master_for(
                 first_master_name,
+                socket_timeout=0.1,
                 **master_for_kwargs
             )
 
             r.ping()
-            logging.info(f"Successfully connected to master: {first_master_name}")
+            logging.info(f"Successfully connected to master {first_master_name} at {master_host}:{master_port}")
 
         except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
             logging.error(f"Could not connect to any sentinel. Error: {e}")
