@@ -108,7 +108,6 @@ class GitlabUserSpamClassifier(EventProcessor):
         logging.debug(
             {
                 "Classification service:": "pushing results to Redis queue",
-                "username": data["username"],
                 "event_type": postfix,
                 "prediction": prediction,
                 "score": score,
