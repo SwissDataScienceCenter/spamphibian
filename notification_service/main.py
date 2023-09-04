@@ -71,8 +71,6 @@ def format_message(queue, data):
         elif queue_name == "user_rename":
             message_format["blocks"][0]["text"]["text"] = "User Renamed on GitLab"
 
-        return message_format
-
     elif queue_name in issue_events:
         message_format = {
             "blocks": [
@@ -110,8 +108,6 @@ def format_message(queue, data):
             message_format["blocks"][0]["text"]["text"] = "Issue Closed on GitLab"
         elif queue_name == "issue_reopen":
             message_format["blocks"][0]["text"]["text"] = "Issue Reopened on GitLab"
-
-        return message_format
 
     elif queue_name in group_events:
         created_at = datetime.datetime.strptime(
@@ -270,6 +266,8 @@ def format_message(queue, data):
                 "text"
             ] = "Project Transferred on GitLab"
 
+    return message_format
+
 
 class SlackNotifier(EventProcessor):
     def __init__(self, slack_webhook_url, queue_prefix, events, redis_conn=None):
@@ -305,14 +303,15 @@ class SlackNotifier(EventProcessor):
         )
 
     def process_event(self, queue_name, data):
-        data = format_message(queue_name, data)
+
+        formatted_message = format_message(queue_name, data)
 
         with self.notification_latency_histogram.time():
-            response = requests.post(self.slack_webhook_url, json=data)
+            response = requests.post(self.slack_webhook_url, json=formatted_message)
 
         if response.status_code != 200:
             logging.debug(
-                f"Notification service: failed to send message to Slack: {response.status_code}: {response.content}, queue name: {queue_name}, data: {data}"
+                f"Notification service: failed to send message to Slack: {response.status_code}: {response.content}, queue name: {queue_name}, data: {formatted_message}"
             )
             self.notification_failures_counter.labels(self.slack_webhook_url).inc()
         else:
