@@ -97,7 +97,7 @@ global:
 
     # Sentinel Configuration
     sentinel:
-      masterSet: "mymaster"
+      masterSet: "gitlab-redis-node-0.gitlab-redis-headless.gitlab.svc.cluster.local"
       hosts:
       - host: gitlab-redis-node-0.gitlab-redis-headless.gitlab.svc.cluster.local
         port: 26379

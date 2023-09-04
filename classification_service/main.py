@@ -27,7 +27,7 @@ logging.basicConfig(
 
 class GitlabUserSpamClassifier(EventProcessor):
     def __init__(self, redis_conn, base_url):
-        super().__init__("retrieval", user_events, redis_conn=redis_conn)
+        super().__init__("retrieval", event_types, redis_conn=redis_conn)
         self.base_url = base_url
 
         prometheus_multiproc_dir = "prometheus_multiproc_dir"
@@ -87,15 +87,17 @@ class GitlabUserSpamClassifier(EventProcessor):
             logging.error(
                 f"Classification service: Unexpected status code {response.status_code} from prediction service. Response text: {response.text}"
             )
-            return
+
+            prediction = "N/A"
+            score = "N/A"
         else:
             self.successful_requests.inc()
 
-        prediction = response.json()["prediction"]
+            prediction = response.json()["prediction"]
 
-        score = round(response.json()["score"], 3)
+            score = round(response.json()["score"], 3)
 
-        self.score_histogram.observe(score)
+            self.score_histogram.observe(score)
 
         results = {
             "event_data": data,

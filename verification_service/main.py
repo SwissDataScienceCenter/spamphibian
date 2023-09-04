@@ -295,7 +295,7 @@ def main():
                 sentinel_kwargs["password"] = REDIS_SENTINEL_PASSWORD
 
             sentinel = redis.Sentinel(
-                [sentinel_hosts[0]],
+                sentinel_hosts,
                 sentinel_kwargs=sentinel_kwargs,
             )
 
@@ -304,7 +304,7 @@ def main():
             )
 
             r.ping()
-            logging.info(f"Successfully connected to Redis sentinel: {sentinel_hosts[0]}")
+            logging.info(f"Successfully connected to Redis sentinel: {sentinel_hosts}")
 
         except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
             logging.error(f"Could not connect to any sentinel. Error: {e}")

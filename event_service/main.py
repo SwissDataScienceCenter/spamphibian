@@ -183,6 +183,7 @@ def create_app(app_name: str) -> Sanic:
                 logging.debug(
                     f"Event service: unhandled event: {event_name if event_name else object_kind}"
                 )
+                return sanic_json({"message": "Event received"})
 
             event_types_counter.labels(queue_name).inc()
 

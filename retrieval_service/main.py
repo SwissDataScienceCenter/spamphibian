@@ -59,7 +59,8 @@ class GitlabRetrievalProcessor(EventProcessor):
                 return
 
             self.events_processed.inc()
-            self.send_to_queue(event_type, gitlab_object, prefix="retrieval")
+            if gitlab_object:
+                self.send_to_queue(event_type, gitlab_object, prefix="retrieval")
 
     def _process_user_event(self, event_data):
         try:
