@@ -149,8 +149,6 @@ if __name__ == "__main__":
     REDIS_DB = int(os.getenv("REDIS_DB", 0))
     REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None
 
-    sentinel_hosts = [tuple(x.split(":")) for x in REDIS_SENTINEL_HOSTS.split(",")]
-
     if REDIS_SENTINEL_ENABLED:
         try:
             sentinel_kwargs = {}
@@ -161,6 +159,8 @@ if __name__ == "__main__":
 
             if REDIS_SENTINEL_PASSWORD:
                 sentinel_kwargs["password"] = REDIS_SENTINEL_PASSWORD
+
+            sentinel_hosts = [tuple(x.split(":")) for x in REDIS_SENTINEL_HOSTS.split(",")]
 
             sentinel = redis.Sentinel(
                 [sentinel_hosts[0]],

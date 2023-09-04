@@ -141,8 +141,6 @@ def main():
     REDIS_DB = int(os.getenv("REDIS_DB", 0))
     REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None
 
-    sentinel_hosts = [tuple(x.split(":")) for x in REDIS_SENTINEL_HOSTS.split(",")]
-
     logging.debug("Redis config:")
     logging.debug(f"REDIS_SENTINEL_ENABLED: {REDIS_SENTINEL_ENABLED}")
     logging.debug(f"REDIS_SENTINEL_HOSTS: {REDIS_SENTINEL_HOSTS}")
@@ -163,6 +161,8 @@ def main():
 
             if REDIS_SENTINEL_PASSWORD:
                 sentinel_kwargs["password"] = REDIS_SENTINEL_PASSWORD
+
+            sentinel_hosts = [tuple(x.split(":")) for x in REDIS_SENTINEL_HOSTS.split(",")]
 
             sentinel = redis.Sentinel(
                 [sentinel_hosts[0]],
