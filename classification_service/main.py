@@ -89,7 +89,7 @@ class GitlabUserSpamClassifier(EventProcessor):
             )
 
             prediction = "N/A"
-            score = "N/A"
+            score = "0.0"
         else:
             self.successful_requests.inc()
 

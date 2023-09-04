@@ -312,7 +312,7 @@ class SlackNotifier(EventProcessor):
 
         if response.status_code != 200:
             logging.debug(
-                f"Notification service: failed to send message to Slack: {response.content}"
+                f"Notification service: failed to send message to Slack: {response.status_code}: {response.content}, queue name: {queue_name}, data: {data}"
             )
             self.notification_failures_counter.labels(self.slack_webhook_url).inc()
         else:
