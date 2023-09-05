@@ -1,24 +1,15 @@
 import json
-import redis
-import time
 import logging
 import requests
 import os
 import time
 
-from common.constants import (
-    project_events,
-    user_events,
-    issue_events,
-    issue_note_events,
-    group_events,
-    snippet_events,
-    event_types,
+from common.constants import event_types
 )
 
 from common.event_processor import EventProcessor
 
-from prometheus_client import multiprocess, CollectorRegistry, Counter, Histogram, Gauge
+from prometheus_client import multiprocess, CollectorRegistry, Counter, Histogram
 
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -83,7 +74,7 @@ class GitlabUserSpamClassifier(EventProcessor):
         if response.status_code != 200:
             self.failed_requests.inc()
             logging.error(
-                f"Classification service: Unexpected status code {response.status_code} from prediction service. Response text: {response.text}"
+                f"Classification service: Model returned code {response.status_code}. Response: {response.text}"
             )
 
             prediction = "N/A"
