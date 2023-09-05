@@ -115,18 +115,19 @@ def create_app(app_name: str, redis_conn=None, testing=False) -> Sanic:
                     noteable_type = gitlab_event["object_attributes"]["noteable_type"]
                     # Check if 'noteable_type' is 'Issue'
                     if noteable_type == "Issue":
-                        # Check if 'created_at' and 'updated_at' are equal, meaning the note was just created
+                        # Check if 'created_at' and 'updated_at' are equal,
+                        # meaning the note was just created
                         if (
                             gitlab_event["object_attributes"]["created_at"]
                             == gitlab_event["object_attributes"]["updated_at"]
                         ):
-                            event_name = f"issue_note_create"
+                            event_name = "issue_note_create"
                         else:
-                            event_name = f"issue_note_update"
+                            event_name = "issue_note_update"
 
                 except KeyError:
                     logging.debug(
-                        "Event service: object_attributes.note does not exist in gitlab_event"
+                        "Event service: does not contain object_attributes.note key"
                     )
 
             elif (
