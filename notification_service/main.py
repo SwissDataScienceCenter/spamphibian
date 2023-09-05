@@ -1,5 +1,3 @@
-import json
-import redis
 import requests
 import os
 import logging
@@ -11,14 +9,12 @@ from common.constants import (
     issue_events,
     issue_note_events,
     group_events,
-    snippet_events,
     event_types,
 )
 
 from common.event_processor import EventProcessor
 
 from prometheus_client import (
-    generate_latest,
     multiprocess,
     CollectorRegistry,
     Counter,

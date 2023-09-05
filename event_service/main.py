@@ -140,15 +140,12 @@ def create_app(app_name: str, redis_conn=None, testing=False) -> Sanic:
 
             else:
                 logging.debug(
-                    f"Event service: unhandled event: {event_name if event_name else object_kind}"
+                    "Event service:",
+                    f"Unhandled event: {event_name if event_name else object_kind}",
                 )
                 return sanic_json({"message": "Event received"})
 
             event_types_counter.labels(event_name).inc()
-
-            logging.debug(
-                f"Event service: sending event to queue: {event_name} with data: {gitlab_event}"
-            )
 
             sanic_event_processor.send_to_queue(
                 event_name, gitlab_event, prefix="event"

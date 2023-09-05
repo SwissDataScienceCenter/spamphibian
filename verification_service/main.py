@@ -1,7 +1,6 @@
 import logging
 import os
 import re
-import redis
 import requests
 import yaml
 from time import sleep
@@ -17,7 +16,6 @@ from common.constants import (
     issue_events,
     issue_note_events,
     group_events,
-    snippet_events,
     event_types,
 )
 
@@ -76,7 +74,8 @@ def verify_email():
     )
 
     logging.debug(
-        f"{email} Domain verification status: {domain_verified}, user verification status: {user_verified}"
+        f"{email} Domain verification status: {domain_verified}",
+        f"user verification status: {user_verified}",
     )
 
     return jsonify(
@@ -164,7 +163,8 @@ class VerificationEventProcessor(EventProcessor):
 
         elif event_type in group_events:
             logging.info(
-                f"Verification service: {event_type} event type received, need to get user email from GitLab API"
+                "Verification service:",
+                f"{event_type} event type received, getting user email from GitLab API",
             )
             max_access_level = 0
             user_id_with_max_access = None
@@ -199,7 +199,8 @@ class VerificationEventProcessor(EventProcessor):
                     user_id_with_max_access = member.get("id")
                     user_email_address = member.get("email")
 
-            # If no email address was found in the group_members list, get it from GitLab.
+            # If no email address was found in the
+            # group_members list, get it from GitLab.
             if not user_email_address and user_id_with_max_access is not None:
                 response = requests.get(
                     f"{self.gitlab_url}/api/v4/users/{user_id_with_max_access}",
@@ -210,28 +211,31 @@ class VerificationEventProcessor(EventProcessor):
 
         if user_email_address is None and event_type != "snippet_check":
             logging.debug(
-                f"Verification service: unable to get user email address for this event type: {event_type}"
+                "Verification service:",
+                f"Unable to get user email address for event type: {event_type}"
             )
             return
         elif user_email_address is not None and event_type != "snippet_check":
             user_verified = check_domain_verification(
                 user_email_address, self.verified_domains_file
             )
-            logging.info(
-                f"Verification service: {user_email_address} domain verification: {user_verified}"
-            )
 
             if not user_verified:
                 user_verified = check_user_verification(
                     user_email_address, self.verified_users_file
                 )
-                logging.info(
-                    f"Verification service: {user_email_address} user verification: {user_verified}"
-                )
+
+            logging.info(
+                f"Verification service: {user_email_address}",
+                f"domain verification: {user_verified}",
+            )
 
         elif event_type == "snippet_check":
             logging.info(
-                f"Verification service: snippet check event type received, individual snippet verification will be done at a later point by the GitLab Item Retrieval Service. Passing event to the next queue."
+                "Verification service:",
+                "Snippet check event received",
+                "Individual snippet verification will be done at a later point",
+                "Passing event to the next service",
             )
             snippet_check_events_total.inc()
 
@@ -239,12 +243,14 @@ class VerificationEventProcessor(EventProcessor):
             verification_failures_total.inc()
             self.send_to_queue(event_type, data, prefix="verification")
             logging.debug(
-                f"Verification service: pushed event to queue: verification_{event_type}"
+                "Verification service:",
+                f"pushed event to queue: verification_{event_type}",
             )
         else:
             verified_events_total.inc()
             logging.info(
-                f"Verification service: verified event type {event_type} for user {user_email_address}"
+                "Verification service:",
+                f"verified event type {event_type} for user {user_email_address}",
             )
 
 

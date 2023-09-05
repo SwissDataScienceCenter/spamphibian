@@ -1,18 +1,14 @@
 import unittest
 import json
-from unittest.mock import patch
 from sanic_testing import TestManager
 import logging
+from test.mock_redis import MockRedis
+from common.constants import event_types
+from event_service.main import create_app
 
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
 )
-
-from test.mock_redis import MockRedis
-
-from common.constants import event_types
-
-from event_service.main import create_app
 
 
 class TestEventService(unittest.TestCase):

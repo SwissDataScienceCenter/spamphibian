@@ -1,7 +1,6 @@
 import unittest
 from unittest.mock import patch
 import json
-from time import sleep
 import responses
 import copy
 
@@ -32,7 +31,7 @@ class TestVerificationService(unittest.TestCase):
 
     def mock_sleep(self, time_to_sleep):
         self.sleep_counter += 1
-        print(f"Sleeping for 1 second...")
+        print("Sleeping for 1 second...")
         if self.sleep_counter > 10:
             raise KeyboardInterrupt()
 
@@ -60,7 +59,7 @@ class TestVerificationService(unittest.TestCase):
         test_cases = []
         json_data = {}
 
-        with open(f"test/json_data/group_members_response.json", "r") as file:
+        with open("test/json_data/group_members_response.json", "r") as file:
             group_members_response = json.load(file)
 
         webhook_event_types = [
@@ -117,9 +116,9 @@ class TestVerificationService(unittest.TestCase):
                 for group_id in ["6", "7"]:
                     test_cases.append(
                         (
-                            f"event_group_rename",
+                            "event_group_rename",
                             json_data[event_type].replace("5", group_id),
-                            f"verification_group_rename",
+                            "verification_group_rename",
                             False,
                         )
                     )
@@ -156,15 +155,15 @@ class TestVerificationService(unittest.TestCase):
 
         # Test case for snippet check
         # load json data from file
-        with open(f"test/json_data/snippet_check.json", "r") as file:
+        with open("test/json_data/snippet_check.json", "r") as file:
             data = json.load(file)
         json_data["snippet_check"] = json.dumps(data)
 
         test_cases.append(
             (
-                f"event_snippet_check",
+                "event_snippet_check",
                 json_data["snippet_check"],
-                f"verification_snippet_check",
+                "verification_snippet_check",
                 True,
             )
         )

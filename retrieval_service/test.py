@@ -2,15 +2,12 @@ import unittest
 from unittest.mock import patch, MagicMock
 import json
 import logging
+from retrieval_service.main import main
+from test.mock_redis import MockRedis
 
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
 )
-
-from retrieval_service.main import main
-
-from test.mock_redis import MockRedis
-
 
 class TestService(unittest.TestCase):
     @patch("gitlab.Gitlab")

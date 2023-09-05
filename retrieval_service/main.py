@@ -1,5 +1,3 @@
-import redis
-import redis.exceptions
 import logging
 import gitlab
 from time import sleep
@@ -12,7 +10,6 @@ from common.constants import (
     issue_events,
     issue_note_events,
     group_events,
-    snippet_events,
     event_types,
 )
 
@@ -67,7 +64,7 @@ class GitlabRetrievalProcessor(EventProcessor):
             return self.gitlab_client.users.get(event_data["user_id"])
         except gitlab.exceptions.GitlabGetError as e:
             logging.info(
-                f'{self.__class__.__name__}: error retrieving user ID {event_data["user_id"]} from GitLab API: {e}'
+                f'{self.__class__.__name__}: GitLab API error retrieving user ID {event_data["user_id"]}: {e}'
             )
 
     def _process_project_event(self, event_data):
@@ -75,7 +72,7 @@ class GitlabRetrievalProcessor(EventProcessor):
             return self.gitlab_client.projects.get(event_data["project_id"])
         except gitlab.exceptions.GitlabGetError as e:
             logging.info(
-                f'{self.__class__.__name__}: error retrieving project ID {event_data["project_id"]} from GitLab API: {e}'
+                f'{self.__class__.__name__}: GitLab API error retrieving project ID {event_data["project_id"]}: {e}'
             )
 
     def _process_issue_event(self, event_data):
@@ -86,7 +83,7 @@ class GitlabRetrievalProcessor(EventProcessor):
             return project.issues.get(event_data["object_attributes"]["id"])
         except gitlab.exceptions.GitlabGetError as e:
             logging.info(
-                f'{self.__class__.__name__}: error retrieving issue ID {event_data["object_attributes"]["id"]} from GitLab API: {e}'
+                f'{self.__class__.__name__}: GitLab API error retrieving issue ID {event_data["object_attributes"]["id"]}: {e}'
             )
 
     def _process_issue_note_event(self, event_data):
@@ -96,7 +93,7 @@ class GitlabRetrievalProcessor(EventProcessor):
             return issue.notes.get(event_data["object_attributes"]["id"])
         except gitlab.exceptions.GitlabGetError as e:
             logging.info(
-                f'{self.__class__.__name__}: error retrieving issue note ID {event_data["object_attributes"]["id"]} from GitLab API: {e}'
+                f'{self.__class__.__name__}: GitLab API error retrieving issue note ID {event_data["object_attributes"]["id"]}: {e}'
             )
 
     def _process_group_event(self, event_data):
@@ -104,7 +101,7 @@ class GitlabRetrievalProcessor(EventProcessor):
             return self.gitlab_client.groups.get(event_data["group_id"])
         except gitlab.exceptions.GitlabGetError as e:
             logging.info(
-                f'{self.__class__.__name__}: error retrieving group ID {event_data["group_id"]} from GitLab API: {e}'
+                f'{self.__class__.__name__}: GitLab API error retrieving group ID {event_data["group_id"]}: {e}'
             )
 
     def send_to_queue(self, event, data, prefix=None):
