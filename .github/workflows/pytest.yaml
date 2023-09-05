@@ -4,6 +4,8 @@ on: [push]
 
 jobs:
   build:
+    env:
+      PROMETHEUS_MULTIPROC_DIR: prometheus_multiproc_dir
 
     runs-on: ubuntu-latest
     strategy:
