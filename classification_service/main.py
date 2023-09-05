@@ -26,7 +26,7 @@ logging.basicConfig(
 
 
 class GitlabUserSpamClassifier(EventProcessor):
-    def __init__(self, redis_conn, base_url):
+    def __init__(self, redis_conn=None, base_url="http://127.0.0.1:5001"):
         super().__init__("retrieval", event_types, redis_conn=redis_conn)
         self.base_url = base_url
 
@@ -69,7 +69,6 @@ class GitlabUserSpamClassifier(EventProcessor):
 
         postfix = queue_name.split("_", 1)[-1]
 
-        # Convert dictionary to json
         data_json = json.dumps(data)
 
         url = f"{self.base_url}/predict_{postfix}"
@@ -81,7 +80,6 @@ class GitlabUserSpamClassifier(EventProcessor):
                 headers={"Content-Type": "application/json"},
             )
 
-        # Check if the request was successful
         if response.status_code != 200:
             self.failed_requests.inc()
             logging.error(
@@ -132,66 +130,7 @@ class GitlabUserSpamClassifier(EventProcessor):
 
 
 def main():
-    REDIS_SENTINEL_ENABLED = os.getenv("REDIS_SENTINEL_ENABLED", "False") == "True"
-    REDIS_MASTER_SET = os.getenv("REDIS_MASTER_SET") or "mymaster"
-    REDIS_SENTINEL_HOSTS = os.getenv("REDIS_SENTINEL_HOSTS") or None
-    REDIS_SENTINEL_PASSWORD = os.getenv("REDIS_SENTINEL_PASSWORD") or None
-    REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-    REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
-    REDIS_DB = int(os.getenv("REDIS_DB", 0))
-    REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None
-
-    logging.debug("Redis config:")
-    logging.debug(f"REDIS_SENTINEL_ENABLED: {REDIS_SENTINEL_ENABLED}")
-    logging.debug(f"REDIS_SENTINEL_HOSTS: {REDIS_SENTINEL_HOSTS}")
-    logging.debug(f"REDIS_SENTINEL_PASSWORD: {REDIS_SENTINEL_PASSWORD}")
-    logging.debug(f"REDIS_MASTER_SET: {REDIS_MASTER_SET}")
-    logging.debug(f"REDIS_HOST: {REDIS_HOST}")
-    logging.debug(f"REDIS_PORT: {REDIS_PORT}")
-    logging.debug(f"REDIS_DB: {REDIS_DB}")
-    logging.debug(f"REDIS_PASSWORD: {REDIS_PASSWORD}")
-
-    if REDIS_SENTINEL_ENABLED:
-        try:
-            sentinel_kwargs = {}
-            master_for_kwargs = {"db": REDIS_DB}
-
-            if REDIS_PASSWORD:
-                master_for_kwargs["password"] = REDIS_PASSWORD
-
-            if REDIS_SENTINEL_PASSWORD:
-                sentinel_kwargs["password"] = REDIS_SENTINEL_PASSWORD
-
-            sentinel_hosts = [tuple(x.split(":")) for x in REDIS_SENTINEL_HOSTS.split(",")]
-
-            sentinel = redis.Sentinel(
-                [sentinel_hosts[0]],
-                sentinel_kwargs=sentinel_kwargs,
-            )
-
-            r = sentinel.master_for(
-                REDIS_MASTER_SET, **master_for_kwargs
-            )
-
-            r.ping()
-            logging.info(f"Successfully connected to Redis sentinel: {sentinel_hosts[0]}")
-
-        except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
-            logging.error(f"Could not connect to any sentinel. Error: {e}")
-            exit(1)
-
-    else:
-        r = redis.Redis(
-                host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD
-            )
-
-    try:
-        r.ping()
-    except redis.exceptions.ConnectionError as e:
-        logging.error(f"Error connecting to Redis: {e}")
-        exit(1)
-
-    classifier = GitlabUserSpamClassifier(redis_conn=r, base_url=os.getenv("MODEL_URL", "http://127.0.0.1:5001"))
+    classifier = GitlabUserSpamClassifier(base_url=os.getenv("MODEL_URL"))
     classifier.run()
 
 

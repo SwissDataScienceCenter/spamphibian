@@ -272,57 +272,7 @@ def process_events(
 def main():
     Thread(target=app.run, kwargs={"port": 8001}).start()
 
-    REDIS_SENTINEL_ENABLED = os.getenv("REDIS_SENTINEL_ENABLED", "False") == "True"
-    REDIS_MASTER_SET = os.getenv("REDIS_MASTER_SET") or "mymaster"
-    REDIS_SENTINEL_HOSTS = os.getenv("REDIS_SENTINEL_HOSTS") or None
-    REDIS_SENTINEL_PASSWORD = os.getenv("REDIS_SENTINEL_PASSWORD") or None
-    REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-    REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
-    REDIS_DB = int(os.getenv("REDIS_DB", 0))
-    REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None
-
-    if REDIS_SENTINEL_ENABLED:
-        try:
-            sentinel_kwargs = {}
-            master_for_kwargs = {"db": REDIS_DB}
-
-            if REDIS_PASSWORD:
-                master_for_kwargs["password"] = REDIS_PASSWORD
-
-            if REDIS_SENTINEL_PASSWORD:
-                sentinel_kwargs["password"] = REDIS_SENTINEL_PASSWORD
-
-            sentinel_hosts = [tuple(x.split(":")) for x in REDIS_SENTINEL_HOSTS.split(",")]
-
-            sentinel = redis.Sentinel(
-                sentinel_hosts,
-                sentinel_kwargs=sentinel_kwargs,
-            )
-
-            r = sentinel.master_for(
-                REDIS_MASTER_SET, **master_for_kwargs
-            )
-
-            r.ping()
-            logging.info(f"Successfully connected to Redis sentinel: {sentinel_hosts}")
-
-        except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
-            logging.error(f"Could not connect to any sentinel. Error: {e}")
-            exit(1)
-
-    else:
-        r = redis.Redis(
-                host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD
-            )
-
-    try:
-        r.ping()
-    except redis.exceptions.ConnectionError as e:
-        logging.error(f"Error connecting to Redis: {e}")
-        exit(1)
-
     process_events(
-        redis_conn=r,
         verified_users_file="verification_service/verified_users.yaml",
         verified_domains_file="verification_service/verified_domains.yaml",
         gitlab_url=os.getenv("GITLAB_URL"),
