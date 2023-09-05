@@ -25,10 +25,8 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - name: Lint with ruff
         run: |
-          # stop the build if there are Python syntax errors or undefined names
-          ruff --format=github --select=E9,F63,F7,F82 --target-version=py39 .
-          # default set of ruff rules with GitHub Annotations
-          ruff --format=github --target-version=py39 .
+          ruff --format=github --select=E9,F63,F7,F82 --line-length 140 --target-version=py39 .
+          ruff --format=github --line-length 140 --target-version=py39 .
         continue-on-error: true
       - name: Run pytest on event_service
         run: pytest event_service/test.py
