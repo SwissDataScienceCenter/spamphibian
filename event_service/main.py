@@ -1,11 +1,6 @@
-from sanic import Sanic
-from sanic.response import json as sanic_json
-from sanic.response import HTTPResponse
-from sanic.worker.loader import AppLoader
-import redis
-import json
-from functools import partial
 import logging
+import os
+from prometheus_client import multiprocess, CollectorRegistry, Counter
 from prometheus_client import (
     generate_latest,
     multiprocess,
@@ -14,13 +9,16 @@ from prometheus_client import (
     Gauge,
     Histogram,
 )
-import os
+from sanic import Sanic
+from sanic.response import json as sanic_json
+from sanic.response import HTTPResponse
+from sanic.worker.loader import AppLoader
+from common.event_processor import EventProcessor
+from functools import partial
 
 from common.constants import (
     project_events,
     user_events,
-    issue_events,
-    issue_note_events,
     group_events,
     snippet_events,
     event_types,
@@ -32,85 +30,41 @@ logging.basicConfig(
 
 prometheus_multiproc_dir = "prometheus_multiproc_dir"
 
-if not os.path.exists(prometheus_multiproc_dir):
-    os.makedirs(prometheus_multiproc_dir)
+try:
+    if not os.path.exists(prometheus_multiproc_dir):
+        os.makedirs(prometheus_multiproc_dir)
+except Exception as e:
+    print(f"An error occurred: {e}")
+
+requests_counter = Counter(
+    "event_service_requests_total",
+    "The number of times my API was accessed",
+    ["method", "endpoint"],
+)
+event_types_counter = Counter(
+    "event_service_event_types_total",
+    "The number of times an event_type was received",
+    ["event_type"],
+)
+
+event_errors = Counter(
+    "event_service_errors_total",
+    "Number of errors encountered in the event service",
+)
+queue_size_gauge = Gauge(
+    "event_service_queue_size", "Size of the Redis event queue", ["queue_name"]
+)
+
+request_latency_histogram = Histogram(
+    "event_service_request_latency_seconds",
+    "Time taken to handle and process incoming events",
+)
 
 
-def create_app(app_name: str) -> Sanic:
-    app = Sanic(app_name)
+def create_app(app_name: str, redis_conn=None, testing=False) -> Sanic:
+    app = Sanic("myApp")
 
-    requests_counter = Counter(
-        "event_service_requests_total",
-        "The number of times my API was accessed",
-        ["method", "endpoint"],
-    )
-    event_types_counter = Counter(
-        "event_service_event_types_total",
-        "The number of times an event_type was received",
-        ["event_type"],
-    )
-
-    event_errors = Counter(
-        "event_service_errors_total",
-        "Number of errors encountered in the event service",
-    )
-    queue_size_gauge = Gauge(
-        "event_service_queue_size", "Size of the Redis event queue", ["queue_name"]
-    )
-    request_latency_histogram = Histogram(
-        "event_service_request_latency_seconds",
-        "Time taken to handle and process incoming events",
-    )
-
-    # Redis connection
-    REDIS_SENTINEL_ENABLED = os.getenv("REDIS_SENTINEL_ENABLED", "False") == "True"
-    REDIS_MASTER_SET = os.getenv("REDIS_MASTER_SET") or "mymaster"
-    REDIS_SENTINEL_HOSTS = os.getenv("REDIS_SENTINEL_HOSTS") or None
-    REDIS_SENTINEL_PASSWORD = os.getenv("REDIS_SENTINEL_PASSWORD") or None
-    REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-    REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
-    REDIS_DB = int(os.getenv("REDIS_DB", 0))
-    REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None
-
-    if REDIS_SENTINEL_ENABLED:
-        try:
-            sentinel_kwargs = {}
-            master_for_kwargs = {"db": REDIS_DB}
-
-            if REDIS_PASSWORD:
-                master_for_kwargs["password"] = REDIS_PASSWORD
-
-            if REDIS_SENTINEL_PASSWORD:
-                sentinel_kwargs["password"] = REDIS_SENTINEL_PASSWORD
-
-            sentinel_hosts = [tuple(x.split(":")) for x in REDIS_SENTINEL_HOSTS.split(",")]
-
-            sentinel = redis.Sentinel(
-                [sentinel_hosts[0]],
-                sentinel_kwargs=sentinel_kwargs,
-            )
-
-            r = sentinel.master_for(
-                REDIS_MASTER_SET, **master_for_kwargs
-            )
-
-            r.ping()
-            logging.info(f"Successfully connected to Redis sentinel: {sentinel_hosts[0]}")
-
-        except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
-            logging.error(f"Could not connect to any sentinel. Error: {e}")
-            exit(1)
-
-    else:
-        r = redis.Redis(
-                host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD
-            )
-
-    try:
-        r.ping()
-    except redis.exceptions.ConnectionError as e:
-        logging.error(f"Error connecting to Redis: {e}")
-        exit(1)
+    sanic_event_processor = EventProcessor(events=event_types, prefix="event", redis_conn=redis_conn)
 
     @app.route("/metrics")
     async def get_metrics(request):
@@ -122,15 +76,16 @@ def create_app(app_name: str) -> Sanic:
             headers={"Content-Type": "text/plain; version=0.0.4; charset=utf-8"},
         )
 
-    @app.before_server_stop
-    async def cleanup_metrics(app, _):
-        multiprocess.mark_process_dead(os.getpid())
+    if not testing:
+        @app.before_server_stop
+        async def cleanup_metrics(app, _):
+            multiprocess.mark_process_dead(os.getpid())
 
     @app.post("/event")
     async def handle_event(request):
         with request_latency_histogram.time():
             requests_counter.labels("POST", "/event").inc()
-            queue_name = ""
+            event_name = ""
             gitlab_event = request.json
 
             # Determine the type of event
@@ -141,22 +96,15 @@ def create_app(app_name: str) -> Sanic:
             logging.debug(f"Event service: received event: {event_name}")
 
             # Project-related events
-            if (
-                event_name in project_events
-                or event_name in user_events
-                or event_name in group_events
-                or event_name in snippet_events
-            ):
-                queue_name = event_name
 
             # Issue-related events
-            elif object_kind == "issue" and action in [
+            if object_kind == "issue" and action in [
                 "open",
                 "close",
                 "reopen",
                 "update",
             ]:
-                queue_name = f"issue_{action}"
+                event_name = f"issue_{action}"
 
             # Note-related events
             elif object_kind == "note":
@@ -170,14 +118,22 @@ def create_app(app_name: str) -> Sanic:
                             gitlab_event["object_attributes"]["created_at"]
                             == gitlab_event["object_attributes"]["updated_at"]
                         ):
-                            queue_name = f"issue_note_create"
+                            event_name = f"issue_note_create"
                         else:
-                            queue_name = f"issue_note_update"
+                            event_name = f"issue_note_update"
 
                 except KeyError:
                     logging.debug(
                         "Event service: object_attributes.note does not exist in gitlab_event"
                     )
+
+            elif (
+                event_name in project_events
+                or event_name in user_events
+                or event_name in group_events
+                or event_name in snippet_events
+            ):
+                event_name = event_name
 
             else:
                 logging.debug(
@@ -185,31 +141,21 @@ def create_app(app_name: str) -> Sanic:
                 )
                 return sanic_json({"message": "Event received"})
 
-            event_types_counter.labels(queue_name).inc()
+            event_types_counter.labels(event_name).inc()
 
-            queue_name = "event_" + queue_name
+            logging.debug(f"Event service: sending event to queue: {event_name} with data: {gitlab_event}")
 
-            try:
-                r.lpush(queue_name, json.dumps(gitlab_event))
-                logging.debug(f"Event service: pushed event to queue: {queue_name}")
-                queue_size_gauge.labels(queue_name).set(r.llen(queue_name))
-            except Exception as e:
-                logging.error(
-                    f"Event service: error pushing event to queue {queue_name}: {e}"
-                )
-                event_errors.inc()
+            sanic_event_processor.send_to_queue(event_name, gitlab_event, prefix="event")
 
             return sanic_json({"message": "Event received"})
 
     return app
-
 
 def main():
     loader = AppLoader(factory=partial(create_app, "EventService"))
     app = loader.load()
     app.prepare(host="0.0.0.0", port=8000, dev=True)
     Sanic.serve(primary=app, app_loader=loader)
-
 
 if __name__ == "__main__":
     main()
