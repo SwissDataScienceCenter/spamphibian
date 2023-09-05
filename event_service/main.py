@@ -1,6 +1,5 @@
 import logging
 import os
-from prometheus_client import multiprocess, CollectorRegistry, Counter
 from prometheus_client import (
     generate_latest,
     multiprocess,

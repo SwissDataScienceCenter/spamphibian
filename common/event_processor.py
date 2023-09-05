@@ -82,13 +82,6 @@ class EventProcessor:
         raise NotImplementedError("Child classes must implement this method")
 
     def send_to_queue(self, event, data, prefix=None):
-        """
-        Send data to a specified Redis list with the given event type.
-        
-        :param event: Type of the event.
-        :param data: Data to be sent.
-        :param prefix: Optional prefix for the queue name. If not provided, the default prefix from initialization will be used.
-        """
         queue_name = f"{prefix}_{event}"
         serialized_data = json.dumps(data)
         
