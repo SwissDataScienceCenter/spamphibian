@@ -60,26 +60,26 @@ class UserSpamClassifier(Resource):
 
         df = pd.DataFrame([data])
 
-        numeric_features = [
-            "theme_id",
-            "color_scheme_id",
-            "projects_limit",
-            "namespace_id",
-        ]
-        categorical_features = [
-            "bot",
-            "last_sign_in_at",
-            "confirmed_at",
-            "last_activity_on",
-            "current_sign_in_at",
-            "can_create_group",
-            "can_create_project",
-            "two_factor_enabled",
-            "external",
-            "private_profile",
-            "is_admin",
-            "note",
-        ]
+        # numeric_features = [
+        #     "theme_id",
+        #     "color_scheme_id",
+        #     "projects_limit",
+        #     "namespace_id",
+        # ]
+        # categorical_features = [
+        #     "bot",
+        #     "last_sign_in_at",
+        #     "confirmed_at",
+        #     "last_activity_on",
+        #     "current_sign_in_at",
+        #     "can_create_group",
+        #     "can_create_project",
+        #     "two_factor_enabled",
+        #     "external",
+        #     "private_profile",
+        #     "is_admin",
+        #     "note",
+        # ]
         text_features = [
             "username",
             "name",
