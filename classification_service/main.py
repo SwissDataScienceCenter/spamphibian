@@ -5,7 +5,6 @@ import os
 import time
 
 from common.constants import event_types
-)
 
 from common.event_processor import EventProcessor
 
