@@ -6,17 +6,14 @@ import json
 
 
 class TestGitlabUserSpamClassifier(unittest.TestCase):
-    @patch("classification_service.main.redis.Redis", autospec=True)
     @patch("classification_service.main.requests.post", autospec=True)
-    def test_run_with_data_in_queue(self, mock_requests_post, mock_redis):
+    def test_run_with_data_in_queue(self, mock_requests_post):
         redis_conn = MockRedis()
 
         redis_conn.lpush(
             "retrieval_user_create",
             json.dumps({"username": "test_user", "some_data": "data"}),
         )
-
-        mock_redis.return_value = redis_conn
 
         mock_response = MagicMock()
         mock_response.status_code = 200
