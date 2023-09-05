@@ -92,13 +92,13 @@ def check_domain_verification(email, verified_domains_file):
     try:
         with open(verified_domains_file, "r") as file:
             verified_domains = yaml.safe_load(file).get("domains", [])
-        
+
         for domain in verified_domains:
             if re.search(domain, email):
                 return True
     except (FileNotFoundError, yaml.YAMLError, KeyError) as e:
         print(f"Error: {e}")
-        
+
     return False
 
 

@@ -303,7 +303,6 @@ class SlackNotifier(EventProcessor):
         )
 
     def process_event(self, queue_name, data):
-
         formatted_message = format_message(queue_name, data)
 
         with self.notification_latency_histogram.time():

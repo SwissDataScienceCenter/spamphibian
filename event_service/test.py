@@ -14,6 +14,7 @@ from common.constants import event_types
 
 from event_service.main import create_app
 
+
 class TestEventService(unittest.TestCase):
     def setUp(self):
         self.redis_mock = MockRedis()
@@ -47,7 +48,6 @@ class TestEventService(unittest.TestCase):
                 event_data=event_data,
                 output_event_type=output_event_type,
             ):
-
                 logging.info(f"Testing event type: {input_event_type}")
 
                 request, response = self.test_manager.test_client.post(

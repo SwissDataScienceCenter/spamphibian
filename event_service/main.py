@@ -64,7 +64,9 @@ request_latency_histogram = Histogram(
 def create_app(app_name: str, redis_conn=None, testing=False) -> Sanic:
     app = Sanic("myApp")
 
-    sanic_event_processor = EventProcessor(events=event_types, prefix="event", redis_conn=redis_conn)
+    sanic_event_processor = EventProcessor(
+        events=event_types, prefix="event", redis_conn=redis_conn
+    )
 
     @app.route("/metrics")
     async def get_metrics(request):
@@ -77,6 +79,7 @@ def create_app(app_name: str, redis_conn=None, testing=False) -> Sanic:
         )
 
     if not testing:
+
         @app.before_server_stop
         async def cleanup_metrics(app, _):
             multiprocess.mark_process_dead(os.getpid())
@@ -143,19 +146,25 @@ def create_app(app_name: str, redis_conn=None, testing=False) -> Sanic:
 
             event_types_counter.labels(event_name).inc()
 
-            logging.debug(f"Event service: sending event to queue: {event_name} with data: {gitlab_event}")
+            logging.debug(
+                f"Event service: sending event to queue: {event_name} with data: {gitlab_event}"
+            )
 
-            sanic_event_processor.send_to_queue(event_name, gitlab_event, prefix="event")
+            sanic_event_processor.send_to_queue(
+                event_name, gitlab_event, prefix="event"
+            )
 
             return sanic_json({"message": "Event received"})
 
     return app
+
 
 def main():
     loader = AppLoader(factory=partial(create_app, "EventService"))
     app = loader.load()
     app.prepare(host="0.0.0.0", port=8000, dev=True)
     Sanic.serve(primary=app, app_loader=loader)
+
 
 if __name__ == "__main__":
     main()
