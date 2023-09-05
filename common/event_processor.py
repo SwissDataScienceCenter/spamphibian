@@ -3,16 +3,6 @@ import json
 import logging
 import os
 
-from common.constants import (
-    project_events,
-    user_events,
-    issue_events,
-    issue_note_events,
-    group_events,
-    snippet_events,
-    event_types,
-)
-
 class EventProcessor:
     def __init__(self, prefix, events, redis_conn=None):
         self.event_queue_names = [f"{prefix}_{event}" for event in events]
@@ -29,15 +19,17 @@ class EventProcessor:
             REDIS_DB = int(os.getenv("REDIS_DB", 0))
             REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None
 
-            logging.debug("Redis config:")
-            logging.debug(f"REDIS_SENTINEL_ENABLED: {REDIS_SENTINEL_ENABLED}")
-            logging.debug(f"REDIS_SENTINEL_HOSTS: {REDIS_SENTINEL_HOSTS}")
-            logging.debug(f"REDIS_SENTINEL_PASSWORD: {REDIS_SENTINEL_PASSWORD}")
-            logging.debug(f"REDIS_MASTER_SET: {REDIS_MASTER_SET}")
-            logging.debug(f"REDIS_HOST: {REDIS_HOST}")
-            logging.debug(f"REDIS_PORT: {REDIS_PORT}")
-            logging.debug(f"REDIS_DB: {REDIS_DB}")
-            logging.debug(f"REDIS_PASSWORD: {REDIS_PASSWORD}")
+            logging.debug(
+                "Redis config:",
+                f"REDIS_SENTINEL_ENABLED: {REDIS_SENTINEL_ENABLED}",
+                f"REDIS_SENTINEL_HOSTS: {REDIS_SENTINEL_HOSTS}",
+                f"REDIS_SENTINEL_PASSWORD: {REDIS_SENTINEL_PASSWORD}",
+                f"REDIS_MASTER_SET: {REDIS_MASTER_SET}",
+                f"REDIS_HOST: {REDIS_HOST}",
+                f"REDIS_PORT: {REDIS_PORT}",
+                f"REDIS_DB: {REDIS_DB}",
+                f"REDIS_PASSWORD: {REDIS_PASSWORD}",
+            )
 
             if REDIS_SENTINEL_ENABLED:
                 try:

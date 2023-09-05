@@ -73,7 +73,8 @@ class GitlabUserSpamClassifier(EventProcessor):
         if response.status_code != 200:
             self.failed_requests.inc()
             logging.error(
-                f"Classification service: Model returned code {response.status_code}. Response: {response.text}"
+                f"Classification service: Model returned code {response.status_code}",
+                f"Response: {response.text}"
             )
 
             prediction = "N/A"
@@ -102,9 +103,6 @@ class GitlabUserSpamClassifier(EventProcessor):
             }
         )
 
-        logging.debug(
-            f"Classification service: pushing results to Redis queue classification_{postfix}"
-        )
         self.send_to_queue(postfix, results, prefix="classification")
 
         self.event_types.labels(type=postfix).inc()
