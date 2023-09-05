@@ -8,3 +8,4 @@ prometheus-flask-exporter
 Werkzeug
 pyyaml
 responses
+sanic-testing
