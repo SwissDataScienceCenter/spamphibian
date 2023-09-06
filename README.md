@@ -8,8 +8,8 @@ Spamphibian is in a very early development stage. It is a scalable and low-laten
   - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
   - [Installation](#installation)
-    - [Prerequisites](#prerequisites)
-    - [Installation Steps](#installation-steps)
+    - [Using Helm](#using-helm)
+    - [Using Docker](#using-docker)
     - [Verification](#verification)
   - [Usage](#usage)
   - [Contributing](#contributing)
@@ -98,26 +98,17 @@ This is the planned architecture of Spamphibian, but it is subject to change:
 
 Ensure smooth sailing with `spamphibian` by following these concise steps.
 
-### Prerequisites
-
-- Ensure [Helm](https://helm.sh/) is installed.
-
-### Installation Steps
-
-1. Open your terminal.
-
-2. Deploy the Helm chart:
+### Using Helm
 
    ```bash
-   helm install spamphibian https://path-to-public-helm-chart-repo -f your-values-file.yaml
+   helm repo add renku https://swissdatasciencecenter.github.io/helm-charts/
+   helm install spamphibian renku/spamphibian -f your-values-file.yaml
    ```
 
-   Replace `https://path-to-public-helm-chart-repo` with the chart repository URL and `your-values-file.yaml` with your customized configuration.
-
-3. Monitor the deployment:
+### Using Docker
 
    ```bash
-   kubectl get pods -l app=spamphibian
+   docker run --name spamphibian -e REDIS_HOST="localhost" -e GITLAB_URL="https://gitlab.example.com" -e GITLAB_TOKEN="glpat-abc" -e SLACK_WEBHOOK_URL="https://hooks.slack.com/services/a/b/c" -e MODEL_URL="http://localhost:5001" -p 8000:8000 renku/spamphibian
    ```
 
 ### Verification
