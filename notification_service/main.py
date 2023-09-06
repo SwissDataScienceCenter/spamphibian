@@ -37,30 +37,55 @@ def format_message(queue, data):
     if queue_name in user_events:
         message_format = {
             "blocks": [
-                {"type": "header", "text": {"type": "plain_text", "text": ""}},
                 {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": f"*Username:* {event_data['username']}\n*Name:* {event_data['name']}\n*Email:* {event_data['email']}",
-                    },
+                    "type": "header",
+                    "text": {"type": "plain_text", "text": ""}
                 },
                 {
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": f"*Spam Classification:* {'Spam' if prediction == 1 else 'Not Spam'}",
+                        "text": f"*Username:* {event_data['username']}\n*Name:* {event_data['name']}\n*Email:* {event_data['email']}"
                     },
+                    "accessory": {
+                        "type": "image",
+                        "image_url": event_data['avatar_url'],
+                        "alt_text": "avatar"
+                    }
                 },
                 {
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": f"*Spam Score*: {score}",
-                    },
+                        "text": f"*Spam Classification:* {'Spam' if prediction == 1 else 'Not Spam'}"
+                    }
                 },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"*Spam Score*: {score}"
+                    }
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"*State:* {event_data['state']}\n*Web URL:* <{event_data['web_url']}|Profile>\n*Bio:* {event_data['bio']}"
+                    }
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"*Website:* <{event_data['website_url']}|Website>" if event_data['website_url'] else ""
+                    }
+                }
             ]
         }
+
+        if not event_data['website_url']:
+            message_format["blocks"] = [block for block in message_format["blocks"] if block['text']['text']]
 
         if queue_name == "user_create":
             message_format["blocks"][0]["text"]["text"] = "User Created on GitLab"
@@ -317,7 +342,7 @@ class SlackNotifier(EventProcessor):
 
 
 def main(
-    slack_webhook_url=os.getenv("SLACK_WEBHOOK_URL"),
+    slack_webhook_url="",
     redis_conn=None,
     testing=False,
 ):
