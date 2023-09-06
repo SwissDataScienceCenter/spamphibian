@@ -25,7 +25,7 @@ class TestSlackNotifier(unittest.TestCase):
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": f"*Username:* test_user\n*Name:* Test User\n*Email:* test_user@example.com"
+                        "text": "*Username:* test_user\n*Name:* Test User\n*Email:* test_user@example.com"
                     },
                     "accessory": {
                         "type": "image",
@@ -37,7 +37,7 @@ class TestSlackNotifier(unittest.TestCase):
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": f"*Spam Classification:* Spam"},
+                        "text": "*Spam Classification:* Spam"},
                 },
                 {
                     "type": "section",
@@ -50,14 +50,14 @@ class TestSlackNotifier(unittest.TestCase):
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": f"*State:* active\n*Web URL:* <http://example.not.a.real.url|Profile>\n*Bio:* This is a test user"
+                        "text": "*State:* active\n*Web URL:* <http://example.not.a.real.url|Profile>\n*Bio:* This is a test user"
                     }
                 },
                 {
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": f"*Website:* <http://example.not.a.real.url|Website>"
+                        "text": "*Website:* <http://example.not.a.real.url|Website>"
                     }
                 }
             ]
