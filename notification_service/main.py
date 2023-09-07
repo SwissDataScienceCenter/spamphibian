@@ -71,26 +71,26 @@ def format_message(queue, data):
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": f"*State:* {event_data['state']}\n*Web URL:* <{event_data['web_url']}|Profile>\n*Bio:* {event_data['bio']}"
-                    }
-                },
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": f"*Website:* <{event_data['website_url']}|Website>" if event_data['website_url'] else ""
+                        "text": f"*State:* {event_data['state']}\n*Web URL:* <{event_data['web_url']}|Profile>{'' if not event_data['bio'] else '\n*Bio:* ' + event_data['bio']}"
                     }
                 }
             ]
         }
 
-        if not event_data['website_url']:
-            message_format["blocks"] = [block for block in message_format["blocks"] if block['text']['text']]
+        if event_data['website_url']:
+            message_format["blocks"].append({
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*Website:* <{event_data['website_url']}|Website>"
+                }
+            })
 
         if queue_name == "user_create":
             message_format["blocks"][0]["text"]["text"] = "User Created on GitLab"
         elif queue_name == "user_rename":
             message_format["blocks"][0]["text"]["text"] = "User Renamed on GitLab"
+
 
     elif queue_name in issue_events:
         message_format = {
@@ -147,7 +147,7 @@ def format_message(queue, data):
                             "type": "mrkdwn",
                             "text": f"*Visibility:*\n{event_data['visibility']}",
                         },
-                        {"type": "mrkdwn", "text": f"*Created At:*\n{created_at_str}"},
+                        {"type": "mrkdwn", "text": f"*Created At:*\n{created_at_str} GMT"},
                         {
                             "type": "mrkdwn",
                             "text": f"*Spam Classification:* {'Spam' if prediction == 1 else 'Not Spam'}",
@@ -197,7 +197,7 @@ def format_message(queue, data):
                             "type": "mrkdwn",
                             "text": f"*Author:*\n{event_data['author']['name']}",
                         },
-                        {"type": "mrkdwn", "text": f"*Created At:*\n{created_at_str}"},
+                        {"type": "mrkdwn", "text": f"*Created At:*\n{created_at_str} GMT"},
                         {
                             "type": "mrkdwn",
                             "text": f"*Spam Classification:* {'Spam' if prediction == 1 else 'Not Spam'}",
@@ -257,7 +257,7 @@ def format_message(queue, data):
                             "type": "mrkdwn",
                             "text": f"*Namespace:*\n{event_data['namespace']['name']}",
                         },
-                        {"type": "mrkdwn", "text": f"*Created At:*\n{created_at_str}"},
+                        {"type": "mrkdwn", "text": f"*Created At:*\n{created_at_str} GMT"},
                         {
                             "type": "mrkdwn",
                             "text": f"*Spam Classification:* {'Spam' if prediction == 1 else 'Not Spam'}",
