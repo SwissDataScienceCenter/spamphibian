@@ -1,20 +1,13 @@
 version: '3'
 
 services:
-  redis:
-    image: redis:latest
-    ports:
-      - "6379:6379"
-    environment:
-      REDIS_PASSWORD: ""
-
   spamphibian:
-    image: spamphibian:0.0.1
+    image: renku/spamphibian:0.0.1
     environment:
       GITLAB_URL: ""
       GITLAB_ACCESS_TOKEN: ""
       SLACK_WEBHOOK_URL: ""
-      MODEL_URL: "http://model_service:5001"
+      MODEL_URL: "http://localhost:5001"
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_DB: "0"

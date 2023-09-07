@@ -10,9 +10,9 @@ Spamphibian is in a very early development stage. It is a scalable and low-laten
   - [Installation](#installation)
     - [Using Helm](#using-helm)
     - [Using Docker](#using-docker)
-    - [Verification](#verification)
-  - [Usage](#usage)
-  - [Contributing](#contributing)
+    - [Using Docker Compose](#using-docker-compose)
+    - [Using Python](#using-python)
+  - [Monitoring](#monitoring)
   - [License](#license)
 
 ## Overview
@@ -98,6 +98,14 @@ This is the planned architecture of Spamphibian, but it is subject to change:
 
 Ensure smooth sailing with `spamphibian` by following these concise steps.
 
+Prerequisites:
+
+- GitLab instance
+- GitLab admin token
+- Slack webhook URL
+- Redis instance (this can be the same as the one used by GitLab, but use a dedicated database. Gitlab usually uses database 0, so use 1, for example)
+- Model service (see `models/flask_service.py` for an example)
+  
 ### Using Helm
 
    ```bash
@@ -111,40 +119,41 @@ Ensure smooth sailing with `spamphibian` by following these concise steps.
    docker run --name spamphibian -e REDIS_HOST="localhost" -e GITLAB_URL="https://gitlab.example.com" -e GITLAB_TOKEN="glpat-abc" -e SLACK_WEBHOOK_URL="https://hooks.slack.com/services/a/b/c" -e MODEL_URL="http://localhost:5001" -p 8000:8000 renku/spamphibian
    ```
 
-### Verification
+### Using Docker Compose
 
-- Validate GitLab with your URL and token.
-- Confirm Slack webhook is responsive.
-- Test accessibility of the model service via its hostname.
-- Check Redis with the provided credentials.
+   ```bash
+   docker-compose up
+   ```
 
-Encounter issues? Refer to our troubleshooting guide or open an issue.
+### Using Python
 
-## Usage
+1. Install prerequisites.
 
-Spamphibian is not yet ready for production use and currently requires manual configuration and bespoke components to be built to get it working. The following steps are necessary to get it working:
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-The following environment variables are required:
+2. Set environment variables.
 
-- `GITLAB_URL`: The URL of the GitLab instance to connect to.
-- `GITLAB_TOKEN`: The token to use to authenticate with the GitLab instance, which must have admin privileges.
-- `SLACK_WEBHOOK_URL`: The URL of the Slack webhook to use to send notifications.
+    ```bash
+    export GITLAB_URL="https://gitlab.example.com"
+    export GITLAB_TOKEN="glpat-abc"
+    export SLACK_WEBHOOK_URL="https://hooks.slack.com/services/a/b/c"
+    export REDIS_HOST="localhost"
+    export MODEL_URL="http://localhost:5001"
+    ```
 
-Install the dependencies in `requirements.txt` using `pip install -r requirements.txt`.
+3. Run the service.
 
-A local Redis instance is required to run the service, which can be started using `docker run --env=ALLOW_EMPTY_PASSWORD=yes --runtime=runc -p 6379:6379 -d bitnami/redis:latest`, for example.
+    ```bash
+    python main.py
+    ```
 
-A web service that evaluates the data from GitLab is required to run the service. An example evaluation service can be found in `classification_service/flask_service.py`. Beware that this example service requires a preprocessing pipeline and Keras model to be present and will not work out of the box currently. A simple script training model will be published in the future, so these components can be built easily using your own GitLab data.
+After Spamphibian is up and running, create a GitLab System Hook through the GitLab admin portal. Point the hook to the `/events` endpoint of Spamphibian. The hook should be triggered on all system-level spam-related events.
 
-A system hook must be configured on the GitLab instance to send notifications to the service. The URL of the Spamphibian service must be configured in the system hook.
+## Monitoring
 
-Currently, Spamphibian only evaluates `user_create` and `user_rename` events.
-
-Spamphibian can then be started using `python main.py`.
-
-## Contributing
-
-Contributions are welcome! Please read the contributing guidelines in the `CONTRIBUTING.md` file before making any contributions.
+Spamphibian exposes a Prometheus endpoint on port 8000 at `/metrics`.
 
 ## License
 
