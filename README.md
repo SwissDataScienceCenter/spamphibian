@@ -148,6 +148,7 @@ Prerequisites:
     export SLACK_WEBHOOK_URL="https://hooks.slack.com/services/a/b/c"
     export REDIS_HOST="localhost"
     export MODEL_URL="http://localhost:5001"
+    export PYTHONPATH="."
     ```
 
 3. Run the service.
