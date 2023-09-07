@@ -3,6 +3,9 @@ import json
 import logging
 import os
 
+
+# EventProcessor class is used to process events from Redis queues
+# and push events back into to Redis queues after processing.
 class EventProcessor:
     def __init__(self, prefix, events, redis_conn=None):
         self.event_queue_names = [f"{prefix}_{event}" for event in events]
@@ -10,7 +13,9 @@ class EventProcessor:
         if redis_conn:
             self.redis_client = redis_conn
         else:
-            REDIS_SENTINEL_ENABLED = os.getenv("REDIS_SENTINEL_ENABLED", "False") == "True"
+            REDIS_SENTINEL_ENABLED = (
+                os.getenv("REDIS_SENTINEL_ENABLED", "False") == "True"
+            )
             REDIS_MASTER_SET = os.getenv("REDIS_MASTER_SET") or "mymaster"
             REDIS_SENTINEL_HOSTS = os.getenv("REDIS_SENTINEL_HOSTS") or None
             REDIS_SENTINEL_PASSWORD = os.getenv("REDIS_SENTINEL_PASSWORD") or None
@@ -42,7 +47,9 @@ class EventProcessor:
                     if REDIS_SENTINEL_PASSWORD:
                         sentinel_kwargs["password"] = REDIS_SENTINEL_PASSWORD
 
-                    sentinel_hosts = [tuple(x.split(":")) for x in REDIS_SENTINEL_HOSTS.split(",")]
+                    sentinel_hosts = [
+                        tuple(x.split(":")) for x in REDIS_SENTINEL_HOSTS.split(",")
+                    ]
 
                     sentinel = redis.Sentinel(
                         [sentinel_hosts[0]],
@@ -53,38 +60,48 @@ class EventProcessor:
                         REDIS_MASTER_SET, **master_for_kwargs
                     )
 
-                    logging.info(f"Successfully connected to Redis sentinel: {sentinel_hosts[0]}")
+                    logging.info(
+                        f"Successfully connected to Redis sentinel: {sentinel_hosts[0]}"
+                    )
 
-                except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
+                except (
+                    redis.exceptions.ConnectionError,
+                    redis.exceptions.TimeoutError,
+                ) as e:
                     logging.error(f"Could not connect to any sentinel. Error: {e}")
                     exit(1)
 
             else:
                 self.redis_client = redis.Redis(
-                        host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD
-                    )
+                    host=REDIS_HOST,
+                    port=REDIS_PORT,
+                    db=REDIS_DB,
+                    password=REDIS_PASSWORD,
+                )
 
             try:
                 self.redis_client.ping()
             except redis.exceptions.ConnectionError as e:
                 logging.error(f"Error connecting to Redis: {e}")
                 exit(1)
-    
+
     def retrieve_event(self):
         for queue_name in self.event_queue_names:
             data = self.redis_client.lpop(queue_name)
             if data:
-                logging.debug(f"{self.__class__.__name__}: processing event {queue_name}")
+                logging.debug(
+                    f"{self.__class__.__name__}: processing event {queue_name}"
+                )
                 data = json.loads(data.decode("utf-8"))
                 self.process_event(queue_name, data)
-    
+
     def process_event(self, queue_name, data):
         raise NotImplementedError("Child classes must implement this method")
 
     def send_to_queue(self, event, data, prefix=None):
         queue_name = f"{prefix}_{event}"
         serialized_data = json.dumps(data)
-        
+
         try:
             self.redis_client.lpush(queue_name, serialized_data)
             logging.debug(f"{self.__class__.__name__}: pushed data to {queue_name}")

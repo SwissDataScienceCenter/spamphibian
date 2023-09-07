@@ -23,6 +23,7 @@ logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
+# Prometheus metrics
 prometheus_multiproc_dir = "prometheus_multiproc_dir"
 
 os.makedirs(prometheus_multiproc_dir, exist_ok=True)
@@ -30,7 +31,6 @@ os.makedirs(prometheus_multiproc_dir, exist_ok=True)
 registry = CollectorRegistry()
 multiprocess.MultiProcessCollector(registry)
 
-# Define Prometheus metrics
 processed_events_total = Counter(
     "verification_service_processed_events_total", "Total number of processed events"
 )
@@ -52,11 +52,15 @@ snippet_check_events_total = Counter(
     "Total number of snippet check events processed",
 )
 
+# Flask app for verification at a later point in the Spampibian pipeline
+# This is used to verify individual snippets that first need to be
+# retrieved from GitLab by the retrieval service.
 app = Flask(__name__)
 
 CONTENT_TYPE_LATEST = str("text/plain; version=0.0.4; charset=utf-8")
 
 
+# User email domain verification endpoint
 @app.route("/verify_email", methods=["POST"])
 def verify_email():
     data = request.get_json()
@@ -129,6 +133,10 @@ def get_user_email_address(event_type, event_data):
         return None
 
 
+# VerificationEventProcessor class, which inherits from EventProcessor.
+# It is used to process events received from redis and push them back
+# into redis after processing, if the user or their email domain is
+# not verified.
 class VerificationEventProcessor(EventProcessor):
     def __init__(
         self,
@@ -155,12 +163,17 @@ class VerificationEventProcessor(EventProcessor):
         user_email_address = None
         user_verified = False
 
+        # Determine how to get the user email address based on event type
         if (
             event_type
             in project_events + user_events + issue_events + issue_note_events
         ):
             user_email_address = get_user_email_address(event_type, data)
 
+        # If the event is a group event, get the user email address by
+        # getting all members of the group, and then checking the
+        # verification status of the user with the highest access
+        # level in the group.
         elif event_type in group_events:
             logging.info(
                 "Verification service:",
@@ -170,6 +183,7 @@ class VerificationEventProcessor(EventProcessor):
             user_id_with_max_access = None
             group_id = data.get("group_id")
 
+            # Get all members of the group
             response = requests.get(
                 f"{self.gitlab_url}/api/v4/groups/{group_id}/members/all",
                 headers={"PRIVATE-TOKEN": f"{self.gitlab_access_token}"},
@@ -192,6 +206,7 @@ class VerificationEventProcessor(EventProcessor):
                 logging.debug("Verification service: unexpected response from server")
                 return
 
+            # Get the user with the highest access level in the group
             for member in group_members:
                 access_level = member.get("access_level")
                 if access_level > max_access_level:
@@ -199,8 +214,9 @@ class VerificationEventProcessor(EventProcessor):
                     user_id_with_max_access = member.get("id")
                     user_email_address = member.get("email")
 
-            # If no email address was found in the
-            # group_members list, get it from GitLab.
+            # If no group member with the highest access level had no
+            # public email address present in the list of group members,
+            # get it from their GitLab user attributes.
             if not user_email_address and user_id_with_max_access is not None:
                 response = requests.get(
                     f"{self.gitlab_url}/api/v4/users/{user_id_with_max_access}",
@@ -209,12 +225,17 @@ class VerificationEventProcessor(EventProcessor):
                 user = response.json()
                 user_email_address = user.get("email")
 
+        # If an email address is still not located and the event type
+        # is not snippet_check, log the situation and return.
         if user_email_address is None and event_type != "snippet_check":
             logging.debug(
                 "Verification service:",
-                f"Unable to get user email address for event type: {event_type}"
+                f"Unable to get user email address for event type: {event_type}",
             )
             return
+
+        # If an email address is located, check if the user or their
+        # email domain is verified.
         elif user_email_address is not None and event_type != "snippet_check":
             user_verified = check_domain_verification(
                 user_email_address, self.verified_domains_file
@@ -230,6 +251,7 @@ class VerificationEventProcessor(EventProcessor):
                 f"domain verification: {user_verified}",
             )
 
+        # Check if the event type is snippet_check.
         elif event_type == "snippet_check":
             logging.info(
                 "Verification service:",
@@ -239,6 +261,9 @@ class VerificationEventProcessor(EventProcessor):
             )
             snippet_check_events_total.inc()
 
+        # If the user or their email domain is not verified, push the
+        # event to the next service. If the user or their email domain
+        # is verified, log the situation and return.
         if not user_verified:
             verification_failures_total.inc()
             self.send_to_queue(event_type, data, prefix="verification")

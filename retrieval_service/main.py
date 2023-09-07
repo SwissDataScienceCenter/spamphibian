@@ -19,7 +19,10 @@ logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-
+# GitlabRetrievalProcessor class is used to process events from Redis queues
+# and push events back into to Redis queues after processing.
+# It is a subclass of EventProcessor.
+# It is used to retrieve data from GitLab using the GitLab API.
 class GitlabRetrievalProcessor(EventProcessor):
     def __init__(self, GITLAB_URL, GITLAB_ACCESS_TOKEN, redis_conn=None, testing=False):
         super().__init__("verification", event_types, redis_conn)
@@ -41,6 +44,7 @@ class GitlabRetrievalProcessor(EventProcessor):
         with self.event_processing_time.time():
             event_type = queue_name.split("_", 1)[-1]
 
+            # Determine how to retrieve data based on event type
             if event_type in user_events:
                 gitlab_object = self._process_user_event(event_data)
             elif event_type in project_events:

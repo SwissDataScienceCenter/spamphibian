@@ -27,6 +27,7 @@ logging.basicConfig(
 )
 
 
+# Format message for Slack
 def format_message(queue, data):
     event_data = data["event_data"]
     prediction = data["prediction"]
@@ -37,60 +38,62 @@ def format_message(queue, data):
     if queue_name in user_events:
         message_format = {
             "blocks": [
-                {
-                    "type": "header",
-                    "text": {"type": "plain_text", "text": ""}
-                },
+                {"type": "header", "text": {"type": "plain_text", "text": ""}},
                 {
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": f"*Username:* {event_data['username']}\n*Name:* {event_data['name']}\n*Email:* {event_data['email']}"
+                        "text": f"*Username:* {event_data['username']}\n*Name:* {event_data['name']}\n*Email:* {event_data['email']}",
                     },
                     "accessory": {
                         "type": "image",
-                        "image_url": event_data['avatar_url'],
-                        "alt_text": "avatar"
-                    }
+                        "image_url": event_data["avatar_url"],
+                        "alt_text": "avatar",
+                    },
                 },
                 {
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": f"*Spam Classification:* {'Spam' if prediction == 1 else 'Not Spam'}"
-                    }
+                        "text": f"*Spam Classification:* {'Spam' if prediction == 1 else 'Not Spam'}",
+                    },
+                },
+                {
+                    "type": "section",
+                    "text": {"type": "mrkdwn", "text": f"*Spam Score*: {score}"},
                 },
                 {
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": f"*Spam Score*: {score}"
-                    }
+                        "text": f"*State:* {event_data['state']}"
+                        + "\n"
+                        + f"*Web URL:* <{event_data['web_url']}|Profile>"
+                        + (
+                            ""
+                            if not event_data["bio"]
+                            else "\n*Bio:* " + event_data["bio"]
+                        ),
+                    },
                 },
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": f"*State:* {event_data['state']}" + "\n" + f"*Web URL:* <{event_data['web_url']}|Profile>" + ("" if not event_data['bio'] else "\n*Bio:* " + event_data['bio'])
-                    }
-                }
             ]
         }
 
-        if event_data['website_url']:
-            message_format["blocks"].append({
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"*Website:* <{event_data['website_url']}|Website>"
+        if event_data["website_url"]:
+            message_format["blocks"].append(
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"*Website:* <{event_data['website_url']}|Website>",
+                    },
                 }
-            })
+            )
 
         if queue_name == "user_create":
             message_format["blocks"][0]["text"]["text"] = "User Created on GitLab"
         elif queue_name == "user_rename":
             message_format["blocks"][0]["text"]["text"] = "User Renamed on GitLab"
-
 
     elif queue_name in issue_events:
         message_format = {
@@ -147,7 +150,10 @@ def format_message(queue, data):
                             "type": "mrkdwn",
                             "text": f"*Visibility:*\n{event_data['visibility']}",
                         },
-                        {"type": "mrkdwn", "text": f"*Created At:*\n{created_at_str} GMT"},
+                        {
+                            "type": "mrkdwn",
+                            "text": f"*Created At:*\n{created_at_str} GMT",
+                        },
                         {
                             "type": "mrkdwn",
                             "text": f"*Spam Classification:* {'Spam' if prediction == 1 else 'Not Spam'}",
@@ -197,7 +203,10 @@ def format_message(queue, data):
                             "type": "mrkdwn",
                             "text": f"*Author:*\n{event_data['author']['name']}",
                         },
-                        {"type": "mrkdwn", "text": f"*Created At:*\n{created_at_str} GMT"},
+                        {
+                            "type": "mrkdwn",
+                            "text": f"*Created At:*\n{created_at_str} GMT",
+                        },
                         {
                             "type": "mrkdwn",
                             "text": f"*Spam Classification:* {'Spam' if prediction == 1 else 'Not Spam'}",
@@ -257,7 +266,10 @@ def format_message(queue, data):
                             "type": "mrkdwn",
                             "text": f"*Namespace:*\n{event_data['namespace']['name']}",
                         },
-                        {"type": "mrkdwn", "text": f"*Created At:*\n{created_at_str} GMT"},
+                        {
+                            "type": "mrkdwn",
+                            "text": f"*Created At:*\n{created_at_str} GMT",
+                        },
                         {
                             "type": "mrkdwn",
                             "text": f"*Spam Classification:* {'Spam' if prediction == 1 else 'Not Spam'}",
@@ -290,6 +302,8 @@ def format_message(queue, data):
     return message_format
 
 
+# SlackNotifier class, inherits from EventProcessor.
+# Used to retrieve events from Redis and send them to Slack.
 class SlackNotifier(EventProcessor):
     def __init__(self, slack_webhook_url, queue_prefix, events, redis_conn=None):
         super().__init__(queue_prefix, events, redis_conn)

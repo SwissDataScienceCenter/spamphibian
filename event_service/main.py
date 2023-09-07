@@ -27,6 +27,7 @@ logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
+# Prometheus metrics
 prometheus_multiproc_dir = "prometheus_multiproc_dir"
 
 try:
@@ -60,13 +61,16 @@ request_latency_histogram = Histogram(
 )
 
 
+# Sanic app
 def create_app(app_name: str, redis_conn=None, testing=False) -> Sanic:
     app = Sanic("myApp")
 
+    # EventProcessor class is used to interact with Redis queues
     sanic_event_processor = EventProcessor(
         events=event_types, prefix="event", redis_conn=redis_conn
     )
 
+    # Prometheus metrics endpoint
     @app.route("/metrics")
     async def get_metrics(request):
         registry = CollectorRegistry()
@@ -83,6 +87,7 @@ def create_app(app_name: str, redis_conn=None, testing=False) -> Sanic:
         async def cleanup_metrics(app, _):
             multiprocess.mark_process_dead(os.getpid())
 
+    # Event endpoint, receives events from GitLab
     @app.post("/event")
     async def handle_event(request):
         with request_latency_histogram.time():
@@ -90,16 +95,14 @@ def create_app(app_name: str, redis_conn=None, testing=False) -> Sanic:
             event_name = ""
             gitlab_event = request.json
 
-            # Determine the type of event
+            # Determine the type of event that has been received
             event_name = gitlab_event.get("event_name")
             object_kind = gitlab_event.get("object_kind")
             action = gitlab_event.get("object_attributes", {}).get("action")
 
             logging.debug(f"Event service: received event: {event_name}")
 
-            # Project-related events
-
-            # Issue-related events
+            # Determine issue-related events
             if object_kind == "issue" and action in [
                 "open",
                 "close",
@@ -108,7 +111,7 @@ def create_app(app_name: str, redis_conn=None, testing=False) -> Sanic:
             ]:
                 event_name = f"issue_{action}"
 
-            # Note-related events
+            # Determine note-related events
             elif object_kind == "note":
                 try:
                     # Check if 'note' exists in 'object_attributes'
@@ -130,6 +133,7 @@ def create_app(app_name: str, redis_conn=None, testing=False) -> Sanic:
                         "Event service: does not contain object_attributes.note key"
                     )
 
+            # Determine project, user, group, and snippet-related events
             elif (
                 event_name in project_events
                 or event_name in user_events
@@ -138,6 +142,7 @@ def create_app(app_name: str, redis_conn=None, testing=False) -> Sanic:
             ):
                 event_name = event_name
 
+            # If the event is not one of the above, then it is unhandled
             else:
                 logging.debug(
                     "Event service:",

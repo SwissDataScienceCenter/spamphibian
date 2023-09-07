@@ -1,3 +1,8 @@
+# Names of events that Spamphibian will process.
+# The names are either the names of the actions
+# sent by GitLab System Hooks or derived from
+# the actions they represent.
+
 project_events = [
     "project_create",
     "project_rename",
