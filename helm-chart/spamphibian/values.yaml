@@ -1,6 +1,5 @@
 # Default values for spamphibian.
 # This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
 
 replicaCount: 1
 
@@ -106,4 +105,5 @@ global:
       - host: gitlab-redis-node-2.gitlab-redis-headless.gitlab.svc.cluster.local
         port: 26379
 
-
+  metrics:
+    enabled: true

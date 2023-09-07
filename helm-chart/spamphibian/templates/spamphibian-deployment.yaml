@@ -11,6 +11,12 @@ spec:
     metadata:
       labels:
         app: {{ include "spamphibian.name" . }}
+      {{- if .Values.global.metrics.enabled }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+      {{- end }}
     spec:
       containers:
       - name: spamphibian
