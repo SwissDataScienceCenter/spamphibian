@@ -157,4 +157,4 @@ Spamphibian exposes a Prometheus endpoint on port 8000 at `/metrics`.
 
 ## License
 
-Spamphibian is under the [MIT License](LICENSE).
+Spamphibian is licensed under the [Apache 2.0 license](LICENSE).
