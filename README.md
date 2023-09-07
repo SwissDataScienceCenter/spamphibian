@@ -7,6 +7,7 @@ Spamphibian is in a very early development stage. It is a scalable and low-laten
 - [Spamphibian](#spamphibian)
   - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
+  - [Limitations](#limitations)
   - [Installation](#installation)
     - [Using Helm](#using-helm)
     - [Using Docker](#using-docker)
@@ -93,6 +94,12 @@ This is the planned architecture of Spamphibian, but it is subject to change:
     style DQ fill:#009A6A,stroke:#333,stroke-width:4px
     style VRU fill:#009A6A,stroke:#333,stroke-width:4px
 ```
+
+## Limitations
+
+Currently, Spamphibian only notifies about potential spam activities. It does not take any action on its own. This is planned for a future release.
+
+Additionally, Spamphibian requires a model service to be running. This service is responsible for serving the machine learning models used for classification. An example model service is provided in `models/flask_service.py`. Releasing a basic, general-use model image is planned for the future.
 
 ## Installation
 
