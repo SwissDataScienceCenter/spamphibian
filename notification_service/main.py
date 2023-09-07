@@ -71,7 +71,7 @@ def format_message(queue, data):
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": f"*State:* {event_data['state']}\n*Web URL:* <{event_data['web_url']}|Profile>{'' if not event_data['bio'] else '\n*Bio:* ' + event_data['bio']}"
+                        "text": f"*State:* {event_data['state']}" + "\n" + f"*Web URL:* <{event_data['web_url']}|Profile>" + ("" if not event_data['bio'] else "\n*Bio:* " + event_data['bio'])
                     }
                 }
             ]
