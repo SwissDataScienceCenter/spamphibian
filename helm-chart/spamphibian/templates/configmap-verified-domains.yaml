@@ -9,7 +9,6 @@ metadata:
 data:
   verified_domains.yaml: |
     domains:
-      # Global top-level domains
-      - "\\.ac\\."  # Academic institutions
-      - "\\.gov$"   # Government institutions
-      - "\\.edu$"   # Educational institutions
+    {{- range .Values.global.verifiedDomains }}
+      - "{{ . }}"
+    {{- end }}

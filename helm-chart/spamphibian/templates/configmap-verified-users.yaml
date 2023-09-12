@@ -10,4 +10,6 @@ metadata:
 data:
   verified_users.yaml: |
     users:
-      - "verified-user@non-verified-domain.com"
+    {{- range .Values.global.verifiedUsers }}
+      - "{{ . }}"
+    {{- end }}
