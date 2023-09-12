@@ -24,7 +24,7 @@ class EventProcessor:
             REDIS_DB = int(os.getenv("REDIS_DB", 0))
             REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None
 
-            logging.debug(
+            logging.debug("\n".join([
                 "Redis config:",
                 f"REDIS_SENTINEL_ENABLED: {REDIS_SENTINEL_ENABLED}",
                 f"REDIS_SENTINEL_HOSTS: {REDIS_SENTINEL_HOSTS}",
@@ -34,7 +34,7 @@ class EventProcessor:
                 f"REDIS_PORT: {REDIS_PORT}",
                 f"REDIS_DB: {REDIS_DB}",
                 f"REDIS_PASSWORD: {REDIS_PASSWORD}",
-            )
+            ]))
 
             if REDIS_SENTINEL_ENABLED:
                 try:

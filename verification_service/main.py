@@ -78,8 +78,7 @@ def verify_email():
     )
 
     logging.debug(
-        f"{email} Domain verification status: {domain_verified}",
-        f"user verification status: {user_verified}",
+        f"Verification service: {email} status: Domain: {domain_verified}. User: {user_verified}"
     )
 
     return jsonify(
@@ -176,8 +175,7 @@ class VerificationEventProcessor(EventProcessor):
         # level in the group.
         elif event_type in group_events:
             logging.info(
-                "Verification service:",
-                f"{event_type} event type received, getting user email from GitLab API",
+                f"Verification service: {event_type} event type received, getting user email from GitLab API"
             )
             max_access_level = 0
             user_id_with_max_access = None
@@ -229,8 +227,7 @@ class VerificationEventProcessor(EventProcessor):
         # is not snippet_check, log the situation and return.
         if user_email_address is None and event_type != "snippet_check":
             logging.debug(
-                "Verification service:",
-                f"Unable to get user email address for event type: {event_type}",
+                f"Verification service: Unable to get user email address for event type: {event_type}"
             )
             return
 
@@ -247,17 +244,15 @@ class VerificationEventProcessor(EventProcessor):
                 )
 
             logging.info(
-                f"Verification service: {user_email_address}",
-                f"domain verification: {user_verified}",
+                f"Verification service: {user_email_address}, domain verification: {user_verified}"
             )
 
         # Check if the event type is snippet_check.
         elif event_type == "snippet_check":
             logging.info(
-                "Verification service:",
-                "Snippet check event received",
-                "Individual snippet verification will be done at a later point",
-                "Passing event to the next service",
+                "Verification service: Snippet check event received. "
+                "Individual snippet verification will be done at a later point. "
+                "Passing event to the next service."
             )
             snippet_check_events_total.inc()
 
@@ -268,14 +263,12 @@ class VerificationEventProcessor(EventProcessor):
             verification_failures_total.inc()
             self.send_to_queue(event_type, data, prefix="verification")
             logging.debug(
-                "Verification service:",
-                f"pushed event to queue: verification_{event_type}",
+                f"Verification service: pushed event to queue: verification_{event_type}"
             )
         else:
             verified_events_total.inc()
             logging.info(
-                "Verification service:",
-                f"verified event type {event_type} for user {user_email_address}",
+                f"Verification service: verified event type {event_type} for user {user_email_address}"
             )
 
 

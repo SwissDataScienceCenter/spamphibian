@@ -145,8 +145,8 @@ def create_app(app_name: str, redis_conn=None, testing=False) -> Sanic:
             # If the event is not one of the above, then it is unhandled
             else:
                 logging.debug(
-                    "Event service:",
-                    f"Unhandled event: {event_name if event_name else object_kind}",
+                    "Event service: Unhandled event: %s", 
+                    event_name if event_name else object_kind
                 )
                 return sanic_json({"message": "Event received"})
 
