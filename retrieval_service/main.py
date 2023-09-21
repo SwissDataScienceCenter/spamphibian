@@ -15,8 +15,9 @@ from common.constants import (
 
 from common.event_processor import EventProcessor
 
+LOGLEVEL = os.environ.get('LOGLEVEL', 'WARNING').upper()
 logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=LOGLEVEL, format="%(asctime)s - %(levelname)s - Retrieval service: %(message)s"
 )
 
 # GitlabRetrievalProcessor class is used to process events from Redis queues

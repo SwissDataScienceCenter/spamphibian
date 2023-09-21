@@ -61,6 +61,8 @@ tolerations: []
 affinity: {}
 
 global:
+  logLevel: "INFO"
+
   gitlab:
     url: "https://gitlab.com"
     accessToken: "glpat-1234567890"

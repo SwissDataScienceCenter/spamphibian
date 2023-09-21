@@ -22,8 +22,9 @@ from prometheus_client import (
     Gauge,
 )
 
+LOGLEVEL = os.environ.get('LOGLEVEL', 'WARNING').upper()
 logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=LOGLEVEL, format="%(asctime)s - %(levelname)s - Notification service: %(message)s"
 )
 
 
@@ -345,12 +346,12 @@ class SlackNotifier(EventProcessor):
 
         if response.status_code != 200:
             logging.debug(
-                f"Notification service: Failed to send message to Slack: queue name: {queue_name}, data: {formatted_message}. "
+                f"Failed to send message to Slack: queue name: {queue_name}, data: {formatted_message}. "
                 f"Response code: {response.status_code} message: {response.content}"
             )
             self.notification_failures_counter.labels(self.slack_webhook_url).inc()
         else:
-            logging.debug("Notification service: successfully sent message to Slack")
+            logging.debug("Successfully sent message to Slack")
             self.notification_counter.labels(self.slack_webhook_url).inc()
 
 

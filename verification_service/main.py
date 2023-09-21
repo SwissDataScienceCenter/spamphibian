@@ -19,8 +19,9 @@ from common.constants import (
     event_types,
 )
 
+LOGLEVEL = os.environ.get('LOGLEVEL', 'WARNING').upper()
 logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=LOGLEVEL, format="%(asctime)s - %(levelname)s - Verification service: %(message)s"
 )
 
 # Prometheus metrics
@@ -78,7 +79,7 @@ def verify_email():
     )
 
     logging.debug(
-        f"Verification service: {email} status: Domain: {domain_verified}. User: {user_verified}"
+        f"{email} status: Domain: {domain_verified}. User: {user_verified}"
     )
 
     return jsonify(
@@ -155,7 +156,7 @@ class VerificationEventProcessor(EventProcessor):
     def process_event(self, queue_name, data):
         event_type = queue_name.split("_", 1)[-1]
 
-        logging.debug(f"Verification service: processing event {event_type}")
+        logging.debug(f"Processing event {event_type}")
 
         processed_events_total.inc()
 
@@ -175,7 +176,7 @@ class VerificationEventProcessor(EventProcessor):
         # level in the group.
         elif event_type in group_events:
             logging.info(
-                f"Verification service: {event_type} event type received, getting user email from GitLab API"
+                f"{event_type} event type received, getting user email from GitLab API"
             )
             max_access_level = 0
             user_id_with_max_access = None
@@ -196,12 +197,12 @@ class VerificationEventProcessor(EventProcessor):
                 group_members = response.json()
             except ValueError:
                 logging.debug(
-                    "Verification service: failed to decode JSON from response"
+                    "Failed to decode JSON from response"
                 )
                 return
 
             if not isinstance(group_members, list):
-                logging.debug("Verification service: unexpected response from server")
+                logging.debug("Unexpected response from server")
                 return
 
             # Get the user with the highest access level in the group
@@ -227,7 +228,7 @@ class VerificationEventProcessor(EventProcessor):
         # is not snippet_check, log the situation and return.
         if user_email_address is None and event_type != "snippet_check":
             logging.debug(
-                f"Verification service: Unable to get user email address for event type: {event_type}"
+                f"Unable to get user email address for event type: {event_type}"
             )
             return
 
@@ -244,14 +245,14 @@ class VerificationEventProcessor(EventProcessor):
                 )
 
             logging.info(
-                f"Verification service: {user_email_address}, domain verification: {user_verified}"
+                f"{user_email_address}, domain verification: {user_verified}"
             )
 
         # Check if the event type is snippet_check.
         elif event_type == "snippet_check":
             logging.info(
-                "Verification service: Snippet check event received. "
-                "Individual snippet verification will be done at a later point. "
+                "Snippet check event received."
+                "Individual snippet verification will be done at a later point."
                 "Passing event to the next service."
             )
             snippet_check_events_total.inc()
@@ -263,12 +264,12 @@ class VerificationEventProcessor(EventProcessor):
             verification_failures_total.inc()
             self.send_to_queue(event_type, data, prefix="verification")
             logging.debug(
-                f"Verification service: pushed event to queue: verification_{event_type}"
+                f"Pushed event to queue: verification_{event_type}"
             )
         else:
             verified_events_total.inc()
             logging.info(
-                f"Verification service: verified event type {event_type} for user {user_email_address}"
+                f"Verified event type {event_type} for user {user_email_address}"
             )
 
 

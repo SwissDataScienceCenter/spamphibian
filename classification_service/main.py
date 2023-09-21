@@ -10,8 +10,9 @@ from common.event_processor import EventProcessor
 
 from prometheus_client import multiprocess, CollectorRegistry, Counter, Histogram
 
+LOGLEVEL = os.environ.get('LOGLEVEL', 'WARNING').upper()
 logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=LOGLEVEL, format="%(asctime)s - %(levelname)s - Classification service: %(message)s"
 )
 
 
@@ -55,7 +56,7 @@ class GitlabUserSpamClassifier(EventProcessor):
         )
 
     def process_event(self, queue_name, data):
-        logging.debug(f"Classification service: processing event {queue_name}")
+        logging.debug(f"processing event {queue_name}")
 
         postfix = queue_name.split("_", 1)[-1]
 
@@ -73,7 +74,7 @@ class GitlabUserSpamClassifier(EventProcessor):
         if response.status_code != 200:
             self.failed_requests.inc()
             logging.error(
-                f"Classification service: Model returned code {response.status_code}",
+                f"Model returned code {response.status_code}",
                 f"Response: {response.text}"
             )
 

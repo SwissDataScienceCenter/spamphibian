@@ -23,8 +23,9 @@ from common.constants import (
     event_types,
 )
 
+LOGLEVEL = os.environ.get('LOGLEVEL', 'WARNING').upper()
 logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=LOGLEVEL, format="%(asctime)s - %(levelname)s - Event service: %(message)s"
 )
 
 # Prometheus metrics
@@ -100,7 +101,7 @@ def create_app(app_name: str, redis_conn=None, testing=False) -> Sanic:
             object_kind = gitlab_event.get("object_kind")
             action = gitlab_event.get("object_attributes", {}).get("action")
 
-            logging.debug(f"Event service: received event: {event_name}")
+            logging.debug(f"Received event: {event_name}")
 
             # Determine issue-related events
             if object_kind == "issue" and action in [
@@ -130,7 +131,7 @@ def create_app(app_name: str, redis_conn=None, testing=False) -> Sanic:
 
                 except KeyError:
                     logging.debug(
-                        "Event service: does not contain object_attributes.note key"
+                        "Does not contain object_attributes.note key"
                     )
 
             # Determine project, user, group, and snippet-related events
@@ -145,7 +146,7 @@ def create_app(app_name: str, redis_conn=None, testing=False) -> Sanic:
             # If the event is not one of the above, then it is unhandled
             else:
                 logging.debug(
-                    "Event service: Unhandled event: %s", 
+                    "Unhandled event: %s", 
                     event_name if event_name else object_kind
                 )
                 return sanic_json({"message": "Event received"})
