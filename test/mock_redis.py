@@ -58,3 +58,7 @@ class MockRedis:
             return len(self.cache[key])
         else:
             return 0
+
+    def ping(self):
+        """Ping the MockRedis instance."""
+        return "PONG"

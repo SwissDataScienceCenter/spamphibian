@@ -365,7 +365,7 @@ def main(
     )
 
     while True:
-        notifier.retrieve_event()
+        notifier.poll_and_process_event()
 
         if testing:
             break

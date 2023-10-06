@@ -262,7 +262,7 @@ class VerificationEventProcessor(EventProcessor):
         # is verified, log the situation and return.
         if not user_verified:
             verification_failures_total.inc()
-            self.send_to_queue(event_type, data, prefix="verification")
+            self.push_event_to_queue(event_type, data, prefix="verification")
             logging.debug(
                 f"Pushed event to queue: verification_{event_type}"
             )
@@ -290,7 +290,7 @@ def process_events(
     )
 
     while True:
-        processor.retrieve_event()
+        processor.poll_and_process_event()
         sleep(1)
 
 

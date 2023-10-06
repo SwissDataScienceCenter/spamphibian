@@ -104,13 +104,13 @@ class GitlabUserSpamClassifier(EventProcessor):
             }
         )
 
-        self.send_to_queue(postfix, results, prefix="classification")
+        self.push_event_to_queue(postfix, results, prefix="classification")
 
         self.event_types.labels(type=postfix).inc()
 
     def run(self, testing=False):
         while True:
-            self.retrieve_event()
+            self.poll_and_process_event()
 
             if testing:
                 break

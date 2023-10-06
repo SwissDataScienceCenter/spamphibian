@@ -13,79 +13,83 @@ class EventProcessor:
         if redis_conn:
             self.redis_client = redis_conn
         else:
-            REDIS_SENTINEL_ENABLED = (
-                os.getenv("REDIS_SENTINEL_ENABLED", "False") == "True"
-            )
-            REDIS_MASTER_SET = os.getenv("REDIS_MASTER_SET") or "mymaster"
-            REDIS_SENTINEL_HOSTS = os.getenv("REDIS_SENTINEL_HOSTS") or None
-            REDIS_SENTINEL_PASSWORD = os.getenv("REDIS_SENTINEL_PASSWORD") or None
-            REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-            REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
-            REDIS_DB = int(os.getenv("REDIS_DB", 0))
-            REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None
+            self._establish_redis_connection()
 
-            logging.debug("\n".join([
-                "Redis config:",
-                f"REDIS_SENTINEL_ENABLED: {REDIS_SENTINEL_ENABLED}",
-                f"REDIS_SENTINEL_HOSTS: {REDIS_SENTINEL_HOSTS}",
-                f"REDIS_SENTINEL_PASSWORD: {REDIS_SENTINEL_PASSWORD}",
-                f"REDIS_MASTER_SET: {REDIS_MASTER_SET}",
-                f"REDIS_HOST: {REDIS_HOST}",
-                f"REDIS_PORT: {REDIS_PORT}",
-                f"REDIS_DB: {REDIS_DB}",
-                f"REDIS_PASSWORD: {REDIS_PASSWORD}",
-            ]))
+        try:
+            self.redis_client.ping()
+        except redis.exceptions.ConnectionError as e:
+            logging.error(f"Error connecting to Redis: {e}")
+            exit(1)
 
-            if REDIS_SENTINEL_ENABLED:
-                try:
-                    sentinel_kwargs = {}
-                    master_for_kwargs = {"db": REDIS_DB}
+    def _establish_redis_connection(self):
 
-                    if REDIS_PASSWORD:
-                        master_for_kwargs["password"] = REDIS_PASSWORD
+        REDIS_SENTINEL_ENABLED = (
+            os.getenv("REDIS_SENTINEL_ENABLED", "False") == "True"
+        )
+        REDIS_MASTER_SET = os.getenv("REDIS_MASTER_SET") or "mymaster"
+        REDIS_SENTINEL_HOSTS = os.getenv("REDIS_SENTINEL_HOSTS") or None
+        REDIS_SENTINEL_PASSWORD = os.getenv("REDIS_SENTINEL_PASSWORD") or None
+        REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+        REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+        REDIS_DB = int(os.getenv("REDIS_DB", 0))
+        REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None
 
-                    if REDIS_SENTINEL_PASSWORD:
-                        sentinel_kwargs["password"] = REDIS_SENTINEL_PASSWORD
+        logging.debug("\n".join([
+            "Redis config:",
+            f"REDIS_SENTINEL_ENABLED: {REDIS_SENTINEL_ENABLED}",
+            f"REDIS_SENTINEL_HOSTS: {REDIS_SENTINEL_HOSTS}",
+            f"REDIS_SENTINEL_PASSWORD: {REDIS_SENTINEL_PASSWORD}",
+            f"REDIS_MASTER_SET: {REDIS_MASTER_SET}",
+            f"REDIS_HOST: {REDIS_HOST}",
+            f"REDIS_PORT: {REDIS_PORT}",
+            f"REDIS_DB: {REDIS_DB}",
+            f"REDIS_PASSWORD: {REDIS_PASSWORD}",
+        ]))
 
-                    sentinel_hosts = [
-                        tuple(x.split(":")) for x in REDIS_SENTINEL_HOSTS.split(",")
-                    ]
+        if REDIS_SENTINEL_ENABLED:
+            try:
+                sentinel_kwargs = {}
+                master_for_kwargs = {"db": REDIS_DB}
 
-                    sentinel = redis.Sentinel(
-                        [sentinel_hosts[0]],
-                        sentinel_kwargs=sentinel_kwargs,
-                    )
+                if REDIS_PASSWORD:
+                    master_for_kwargs["password"] = REDIS_PASSWORD
 
-                    self.redis_client = sentinel.master_for(
-                        REDIS_MASTER_SET, **master_for_kwargs
-                    )
+                if REDIS_SENTINEL_PASSWORD:
+                    sentinel_kwargs["password"] = REDIS_SENTINEL_PASSWORD
 
-                    logging.info(
-                        f"Successfully connected to Redis sentinel: {sentinel_hosts[0]}"
-                    )
+                sentinel_hosts = [
+                    tuple(x.split(":")) for x in REDIS_SENTINEL_HOSTS.split(",")
+                ]
 
-                except (
-                    redis.exceptions.ConnectionError,
-                    redis.exceptions.TimeoutError,
-                ) as e:
-                    logging.error(f"Could not connect to any sentinel. Error: {e}")
-                    exit(1)
-
-            else:
-                self.redis_client = redis.Redis(
-                    host=REDIS_HOST,
-                    port=REDIS_PORT,
-                    db=REDIS_DB,
-                    password=REDIS_PASSWORD,
+                sentinel = redis.Sentinel(
+                    [sentinel_hosts[0]],
+                    sentinel_kwargs=sentinel_kwargs,
                 )
 
-            try:
-                self.redis_client.ping()
-            except redis.exceptions.ConnectionError as e:
-                logging.error(f"Error connecting to Redis: {e}")
+                self.redis_client = sentinel.master_for(
+                    REDIS_MASTER_SET, **master_for_kwargs
+                )
+
+                logging.info(
+                    f"Successfully connected to Redis sentinel: {sentinel_hosts[0]}"
+                )
+
+            except (
+                redis.exceptions.ConnectionError,
+                redis.exceptions.TimeoutError,
+            ) as e:
+                logging.error(f"Could not connect to any sentinel. Error: {e}")
                 exit(1)
 
-    def retrieve_event(self):
+        else:
+            self.redis_client = redis.Redis(
+                host=REDIS_HOST,
+                port=REDIS_PORT,
+                db=REDIS_DB,
+                password=REDIS_PASSWORD,
+            )
+
+    def poll_and_process_event(self):
         for queue_name in self.event_queue_names:
             data = self.redis_client.lpop(queue_name)
             if data:
@@ -98,7 +102,7 @@ class EventProcessor:
     def process_event(self, queue_name, data):
         raise NotImplementedError("Child classes must implement this method")
 
-    def send_to_queue(self, event, data, prefix=None):
+    def push_event_to_queue(self, event, data, prefix=None):
         queue_name = f"{prefix}_{event}"
         serialized_data = json.dumps(data)
 

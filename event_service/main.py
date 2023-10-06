@@ -153,7 +153,7 @@ def create_app(app_name: str, redis_conn=None, testing=False) -> Sanic:
 
             event_types_counter.labels(event_name).inc()
 
-            sanic_event_processor.send_to_queue(
+            sanic_event_processor.push_event_to_queue(
                 event_name, gitlab_event, prefix="event"
             )
 

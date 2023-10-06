@@ -62,7 +62,7 @@ class GitlabRetrievalProcessor(EventProcessor):
 
             self.events_processed.inc()
             if gitlab_object:
-                self.send_to_queue(event_type, gitlab_object, prefix="retrieval")
+                self.push_event_to_queue(event_type, gitlab_object, prefix="retrieval")
 
     def _process_user_event(self, event_data):
         try:
@@ -109,7 +109,7 @@ class GitlabRetrievalProcessor(EventProcessor):
                 f'{self.__class__.__name__}: GitLab API error retrieving group ID {event_data["group_id"]}: {e}'
             )
 
-    def send_to_queue(self, event, data, prefix=None):
+    def push_event_to_queue(self, event, data, prefix=None):
         queue_name = f"{prefix}_{event}"
         serialized_data = data.to_json()
 
@@ -121,7 +121,7 @@ class GitlabRetrievalProcessor(EventProcessor):
 
     def run(self):
         while True:
-            self.retrieve_event()
+            self.poll_and_process_event()
 
             if self.testing:
                 break
