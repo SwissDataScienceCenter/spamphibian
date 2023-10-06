@@ -11,7 +11,7 @@ api = Api(app)
 
 
 def to_dense(x):
-    return np.asarray(x.todense())
+    return x.toarray()
 
 
 def load_resources():
