@@ -32,8 +32,7 @@ logging.basicConfig(
 prometheus_multiproc_dir = "prometheus_multiproc_dir"
 
 try:
-    if not os.path.exists(prometheus_multiproc_dir):
-        os.makedirs(prometheus_multiproc_dir)
+    os.makedirs(prometheus_multiproc_dir, exist_ok=True)
 except Exception as e:
     print(f"An error occurred: {e}")
 

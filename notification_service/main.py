@@ -342,7 +342,7 @@ class SlackNotifier(EventProcessor):
         formatted_message = format_message(queue_name, data)
 
         with self.notification_latency_histogram.time():
-            response = requests.post(self.slack_webhook_url, json=formatted_message)
+            response = requests.post(self.slack_webhook_url, json=formatted_message, timeout=10)
 
         if response.status_code != 200:
             logging.debug(

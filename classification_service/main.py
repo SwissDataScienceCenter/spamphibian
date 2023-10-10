@@ -17,9 +17,9 @@ logging.basicConfig(
 
 
 class GitlabUserSpamClassifier(EventProcessor):
-    def __init__(self, redis_conn=None, base_url="http://127.0.0.1:5001"):
+    def __init__(self, redis_conn=None, model_url="http://127.0.0.1:5001"):
         super().__init__("retrieval", event_types, redis_conn=redis_conn)
-        self.base_url = base_url
+        self.model_url = model_url
 
         prometheus_multiproc_dir = "prometheus_multiproc_dir"
 
@@ -62,14 +62,19 @@ class GitlabUserSpamClassifier(EventProcessor):
 
         data_json = json.dumps(data)
 
-        url = f"{self.base_url}/predict_{postfix}"
+        url = f"{self.model_url}/predict_{postfix}"
 
         with self.request_latency.time():
-            response = requests.post(
-                url,
-                data=data_json,
-                headers={"Content-Type": "application/json"},
-            )
+            try:
+                response = requests.post(
+                    url,
+                    data=data_json,
+                    headers={"Content-Type": "application/json"},
+                    timeout=10
+                )
+            except requests.Timeout:
+                print("The request timed out")
+
 
         if response.status_code != 200:
             self.failed_requests.inc()
@@ -119,7 +124,7 @@ class GitlabUserSpamClassifier(EventProcessor):
 
 
 def main():
-    classifier = GitlabUserSpamClassifier(base_url=os.getenv("MODEL_URL"))
+    classifier = GitlabUserSpamClassifier(model_url=os.getenv("MODEL_URL"))
     classifier.run()
 
 
