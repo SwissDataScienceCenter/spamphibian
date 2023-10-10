@@ -1,0 +1,13 @@
+{{- if .Values.global.modelService.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "spamphibian.fullname" . }}-model
+spec:
+  selector:
+    app: {{ include "spamphibian.name" . }}-model
+  ports:
+    - protocol: TCP
+      port: {{ .Values.global.modelService.webhook.port }}
+      targetPort: {{ .Values.global.modelService.webhook.port }}
+{{- end }}

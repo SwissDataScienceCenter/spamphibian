@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "spamphibian.fullname" . }}-verified-domains-config
+  labels:
+    app.kubernetes.io/name: {{ include "spamphibian.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+data:
+  verified_domains.yaml: |
+    domains:
+    {{- range .Values.global.verifiedDomains }}
+      - "{{ . }}"
+    {{- end }}

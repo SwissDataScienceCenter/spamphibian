@@ -1,0 +1,5 @@
+domains:
+  # Global top-level domains
+  - "\\.ac\\."  # Academic institutions
+  - "\\.gov"  # Government institutions
+  - "\\.edu"  # Educational institutions

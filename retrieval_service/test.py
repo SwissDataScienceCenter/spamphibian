@@ -1,0 +1,42 @@
+import unittest
+from unittest.mock import patch, MagicMock
+import json
+import logging
+from retrieval_service.main import main
+from test.mock_redis import MockRedis
+
+logging.basicConfig(
+    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
+class TestService(unittest.TestCase):
+    @patch("gitlab.Gitlab")
+    def test_retrieve_gitlab_objects(self, mock_gitlab):
+        redis_conn = MockRedis()
+
+        mock_gl = MagicMock()
+        mock_gitlab.return_value = mock_gl
+
+        mock_user = MagicMock()
+        mock_user.to_json.return_value = json.dumps({"user_id": "123"})
+        mock_gl.users.get.return_value = mock_user
+
+        redis_conn.lpush("verification_user_create", json.dumps({"user_id": "123"}))
+
+        main(
+            GITLAB_URL="https://gitlab.com",
+            GITLAB_ACCESS_TOKEN="token",
+            redis_conn=redis_conn,
+            testing=True,
+        )
+
+        mock_gitlab.assert_called_once_with("https://gitlab.com", private_token="token")
+        mock_gl.users.get.assert_called_once_with("123")
+        self.assertEqual(
+            redis_conn.lpop("retrieval_user_create"),
+            json.dumps({"user_id": "123"}).encode("utf-8"),
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()
