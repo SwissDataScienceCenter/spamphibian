@@ -3,7 +3,6 @@ import os
 import re
 import requests
 import yaml
-from time import sleep
 from prometheus_client import multiprocess, CollectorRegistry, Counter
 from flask import Flask, request, jsonify
 from threading import Thread
@@ -16,7 +15,6 @@ from common.constants import (
     issue_events,
     issue_note_events,
     group_events,
-    event_types,
 )
 
 LOGLEVEL = os.environ.get('LOGLEVEL', 'WARNING').upper()
@@ -140,21 +138,20 @@ def get_user_email_address(event_type, event_data):
 class VerificationEventProcessor(EventProcessor):
     def __init__(
         self,
-        prefix,
+        stream_name,
         redis_conn=None,
         verified_users_file=None,
         verified_domains_file=None,
         gitlab_url=None,
         gitlab_access_token=None,
     ):
-        super().__init__(prefix, event_types, redis_conn)
+        super().__init__(stream_name, redis_conn)
         self.verified_users_file = verified_users_file
         self.verified_domains_file = verified_domains_file
         self.gitlab_url = gitlab_url
         self.gitlab_access_token = gitlab_access_token
 
-    def process_event(self, queue_name, data):
-        event_type = queue_name.split("_", 1)[-1]
+    def process_event(self, event_type, data):
 
         logging.debug(f"Processing event {event_type}")
 
@@ -262,7 +259,7 @@ class VerificationEventProcessor(EventProcessor):
         # is verified, log the situation and return.
         if not user_verified:
             verification_failures_total.inc()
-            self.push_event_to_queue(event_type, data, prefix="verification")
+            self.push_event_to_queue(event_type, data, stream_name="verification")
             logging.debug(
                 f"Pushed event to queue: verification_{event_type}"
             )
@@ -289,9 +286,7 @@ def process_events(
         gitlab_access_token=gitlab_access_token,
     )
 
-    while True:
-        processor.poll_and_process_event()
-        sleep(1)
+    processor.poll_and_process_event()
 
 
 def main():

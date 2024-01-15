@@ -9,7 +9,6 @@ from common.constants import (
     issue_events,
     issue_note_events,
     group_events,
-    event_types,
 )
 
 from common.event_processor import EventProcessor
@@ -29,14 +28,12 @@ logging.basicConfig(
 
 
 # Format message for Slack
-def format_message(queue, data):
+def format_message(event_type, data):
     event_data = data["event_data"]
     prediction = data["prediction"]
     score = data["score"]
 
-    queue_name = queue.removeprefix("classification_")
-
-    if queue_name in user_events:
+    if event_type in user_events:
         message_format = {
             "blocks": [
                 {"type": "header", "text": {"type": "plain_text", "text": ""}},
@@ -91,12 +88,12 @@ def format_message(queue, data):
                 }
             )
 
-        if queue_name == "user_create":
+        if event_type == "user_create":
             message_format["blocks"][0]["text"]["text"] = "User Created on GitLab"
-        elif queue_name == "user_rename":
+        elif event_type == "user_rename":
             message_format["blocks"][0]["text"]["text"] = "User Renamed on GitLab"
 
-    elif queue_name in issue_events:
+    elif event_type in issue_events:
         message_format = {
             "blocks": [
                 {"type": "header", "text": {"type": "plain_text", "text": ""}},
@@ -125,16 +122,16 @@ def format_message(queue, data):
             ]
         }
 
-        if queue_name == "issue_open":
+        if event_type == "issue_open":
             message_format["blocks"][0]["text"]["text"] = "Issue Opened on GitLab"
-        elif queue_name == "issue_update":
+        elif event_type == "issue_update":
             message_format["blocks"][0]["text"]["text"] = "Issue Updated on GitLab"
-        elif queue_name == "issue_close":
+        elif event_type == "issue_close":
             message_format["blocks"][0]["text"]["text"] = "Issue Closed on GitLab"
-        elif queue_name == "issue_reopen":
+        elif event_type == "issue_reopen":
             message_format["blocks"][0]["text"]["text"] = "Issue Reopened on GitLab"
 
-    elif queue_name in group_events:
+    elif event_type in group_events:
         created_at = datetime.datetime.strptime(
             event_data["created_at"], "%Y-%m-%dT%H:%M:%S.%fZ"
         )
@@ -175,12 +172,12 @@ def format_message(queue, data):
             ]
         }
 
-        if queue_name == "group_create":
+        if event_type == "group_create":
             message_format["blocks"][0]["text"]["text"] = "Group Created on GitLab"
-        elif queue_name == "group_rename":
+        elif event_type == "group_rename":
             message_format["blocks"][0]["text"]["text"] = "Group Renamed on GitLab"
 
-    elif queue_name in issue_note_events:
+    elif event_type in issue_note_events:
         created_at = datetime.datetime.strptime(
             event_data["created_at"], "%Y-%m-%dT%H:%M:%S.%fZ"
         )
@@ -235,12 +232,12 @@ def format_message(queue, data):
             ]
         }
 
-        if queue_name == "issue_note_create":
+        if event_type == "issue_note_create":
             message_format["blocks"][0]["text"]["text"] = "Issue Note Created on GitLab"
-        elif queue_name == "issue_note_update":
+        elif event_type == "issue_note_update":
             message_format["blocks"][0]["text"]["text"] = "Issue Note Updated on GitLab"
 
-    elif queue_name in project_events:
+    elif event_type in project_events:
         created_at = datetime.datetime.strptime(
             event_data["created_at"], "%Y-%m-%dT%H:%M:%S.%fZ"
         )
@@ -291,11 +288,11 @@ def format_message(queue, data):
             ]
         }
 
-        if queue_name == "project_create":
+        if event_type == "project_create":
             message_format["blocks"][0]["text"]["text"] = "Project Created on GitLab"
-        elif queue_name == "project_rename":
+        elif event_type == "project_rename":
             message_format["blocks"][0]["text"]["text"] = "Project Renamed on GitLab"
-        elif queue_name == "project_transfer":
+        elif event_type == "project_transfer":
             message_format["blocks"][0]["text"][
                 "text"
             ] = "Project Ownership Transferred on GitLab"
@@ -306,8 +303,8 @@ def format_message(queue, data):
 # SlackNotifier class, inherits from EventProcessor.
 # Used to retrieve events from Redis and send them to Slack.
 class SlackNotifier(EventProcessor):
-    def __init__(self, slack_webhook_url, queue_prefix, events, redis_conn=None):
-        super().__init__(queue_prefix, events, redis_conn)
+    def __init__(self, slack_webhook_url, stream_name, redis_conn=None):
+        super().__init__(stream_name, redis_conn)
         self.slack_webhook_url = slack_webhook_url
 
         prometheus_multiproc_dir = "prometheus_multiproc_dir"
@@ -338,15 +335,15 @@ class SlackNotifier(EventProcessor):
             "notification_service_queue_size", "Number of events waiting in the queue"
         )
 
-    def process_event(self, queue_name, data):
-        formatted_message = format_message(queue_name, data)
+    def process_event(self, event_type, data):
+        formatted_message = format_message(event_type, data)
 
         with self.notification_latency_histogram.time():
             response = requests.post(self.slack_webhook_url, json=formatted_message, timeout=10)
 
         if response.status_code != 200:
             logging.debug(
-                f"Failed to send message to Slack: queue name: {queue_name}, data: {formatted_message}. "
+                f"Failed to send message to Slack: event: {event_type}, data: {formatted_message}. "
                 f"Response code: {response.status_code} message: {response.content}"
             )
             self.notification_failures_counter.labels(self.slack_webhook_url).inc()
@@ -361,14 +358,10 @@ def main(
     testing=False,
 ):
     notifier = SlackNotifier(
-        slack_webhook_url, "classification", event_types, redis_conn=redis_conn
+        slack_webhook_url, "classification", redis_conn=redis_conn
     )
 
-    while True:
-        notifier.poll_and_process_event()
-
-        if testing:
-            break
+    notifier.poll_and_process_event()
 
 
 if __name__ == "__main__":

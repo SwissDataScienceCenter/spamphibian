@@ -4,11 +4,11 @@ import logging
 import os
 
 
-# EventProcessor class is used to process events from Redis queues
-# and push events back into to Redis queues after processing.
+# EventProcessor class is used to process events from Redis streams
+# and add events back into to Redis streams after processing.
 class EventProcessor:
-    def __init__(self, prefix, events, redis_conn=None):
-        self.event_queue_names = [f"{prefix}_{event}" for event in events]
+    def __init__(self, stream_name, redis_conn=None):
+        self.event_stream_name = stream_name
 
         if redis_conn:
             self.redis_client = redis_conn
@@ -90,24 +90,30 @@ class EventProcessor:
             )
 
     def poll_and_process_event(self):
-        for queue_name in self.event_queue_names:
-            data = self.redis_client.lpop(queue_name)
-            if data:
-                logging.debug(
-                    f"{self.__class__.__name__}: processing event {queue_name}"
-                )
-                data = json.loads(data.decode("utf-8"))
-                self.process_event(queue_name, data)
+        while True:
+            messages = self.redis_client.xread({self.event_stream_name: '0'}, block=10000, count=1)
+            if messages:
+                for message in messages[0][1]:
+                    message_id = message[0]
+                    for key in message[1].keys():
+                        decoded_key = key.decode('utf-8')
+                        logging.debug(
+                            f"{self.__class__.__name__}: processing event {decoded_key}"
+                        )
+                        data = json.loads(message[1][key].decode('utf-8'))
+                        self.process_event(decoded_key, data)
 
-    def process_event(self, queue_name, data):
+                    # Delete the message from the stream after processing
+                    self.redis_client.xdel(self.event_stream_name, message_id)
+
+    def process_event(self, event_type, data):
         raise NotImplementedError("Child classes must implement this method")
 
-    def push_event_to_queue(self, event, data, prefix=None):
-        queue_name = f"{prefix}_{event}"
+    def push_event_to_queue(self, event_type, data, stream_name=None):
         serialized_data = json.dumps(data)
 
         try:
-            self.redis_client.lpush(queue_name, serialized_data)
-            logging.debug(f"{self.__class__.__name__}: pushed data to {queue_name}")
+            self.redis_client.xadd(stream_name, {event_type: serialized_data})
+            logging.debug(f"{self.__class__.__name__}: added data to {stream_name}")
         except Exception as e:
-            logging.error(f"Error pushing data to queue {queue_name}: {e}")
+            logging.error(f"Error adding data to stream {stream_name}: {e}")

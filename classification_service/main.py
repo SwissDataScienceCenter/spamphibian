@@ -2,7 +2,6 @@ import json
 import logging
 import requests
 import os
-import time
 
 from common.constants import event_types
 
@@ -18,7 +17,7 @@ logging.basicConfig(
 
 class GitlabUserSpamClassifier(EventProcessor):
     def __init__(self, redis_conn=None, model_url="http://127.0.0.1:5001"):
-        super().__init__("retrieval", event_types, redis_conn=redis_conn)
+        super().__init__("retrieval", redis_conn=redis_conn)
         self.model_url = model_url
 
         prometheus_multiproc_dir = "prometheus_multiproc_dir"
@@ -55,14 +54,12 @@ class GitlabUserSpamClassifier(EventProcessor):
             ["type"],
         )
 
-    def process_event(self, queue_name, data):
-        logging.debug(f"processing event {queue_name}")
-
-        postfix = queue_name.split("_", 1)[-1]
+    def process_event(self, event_type, data):
+        logging.debug(f"processing event {event_type}")
 
         data_json = json.dumps(data)
 
-        url = f"{self.model_url}/predict_{postfix}"
+        url = f"{self.model_url}/predict_{event_type}"
 
         with self.request_latency.time():
             try:
@@ -103,24 +100,18 @@ class GitlabUserSpamClassifier(EventProcessor):
         logging.debug(
             {
                 "Classification service:": "pushing results to Redis queue",
-                "event_type": postfix,
+                "event_type": event_type,
                 "prediction": prediction,
                 "score": score,
             }
         )
 
-        self.push_event_to_queue(postfix, results, prefix="classification")
+        self.push_event_to_queue(event_type, results, stream_name="classification")
 
-        self.event_types.labels(type=postfix).inc()
+        self.event_types.labels(type=event_type).inc()
 
     def run(self, testing=False):
-        while True:
-            self.poll_and_process_event()
-
-            if testing:
-                break
-
-            time.sleep(0.2)
+        self.poll_and_process_event()
 
 
 def main():

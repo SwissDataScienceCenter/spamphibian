@@ -1,6 +1,5 @@
 import logging
 import gitlab
-from time import sleep
 import os
 from prometheus_client import Counter, Histogram
 
@@ -26,7 +25,7 @@ logging.basicConfig(
 # It is used to retrieve data from GitLab using the GitLab API.
 class GitlabRetrievalProcessor(EventProcessor):
     def __init__(self, GITLAB_URL, GITLAB_ACCESS_TOKEN, redis_conn=None, testing=False):
-        super().__init__("verification", event_types, redis_conn)
+        super().__init__("verification", redis_conn)
         self.gitlab_client = gitlab.Gitlab(
             GITLAB_URL, private_token=GITLAB_ACCESS_TOKEN
         )
@@ -41,9 +40,8 @@ class GitlabRetrievalProcessor(EventProcessor):
             "Total number of events processed",
         )
 
-    def process_event(self, queue_name, event_data):
+    def process_event(self, event_type, event_data):
         with self.event_processing_time.time():
-            event_type = queue_name.split("_", 1)[-1]
 
             # Determine how to retrieve data based on event type
             if event_type in user_events:
@@ -62,7 +60,7 @@ class GitlabRetrievalProcessor(EventProcessor):
 
             self.events_processed.inc()
             if gitlab_object:
-                self.push_event_to_queue(event_type, gitlab_object, prefix="retrieval")
+                self.push_event_to_queue(event_type, gitlab_object, stream_name="retrieval")
 
     def _process_user_event(self, event_data):
         try:
@@ -109,25 +107,18 @@ class GitlabRetrievalProcessor(EventProcessor):
                 f'{self.__class__.__name__}: GitLab API error retrieving group ID {event_data["group_id"]}: {e}'
             )
 
-    def push_event_to_queue(self, event, data, prefix=None):
-        queue_name = f"{prefix}_{event}"
+    def push_event_to_queue(self, event_type, data, stream_name=None):
         serialized_data = data.to_json()
 
         try:
-            self.redis_client.lpush(queue_name, serialized_data)
-            logging.debug(f"{self.__class__.__name__}: pushed data to {queue_name}")
+            self.redis_client.xadd(stream_name, {event_type: serialized_data})
+            logging.debug(f"{self.__class__.__name__}: added data to {stream_name}")
         except Exception as e:
-            logging.error(f"Error pushing data to queue {queue_name}: {e}")
+            logging.error(f"Error adding data to queue {stream_name}: {e}")
 
     def run(self):
         while True:
             self.poll_and_process_event()
-
-            if self.testing:
-                break
-
-            sleep(1)
-
 
 def main(
     GITLAB_URL=os.getenv("GITLAB_URL"),

@@ -67,7 +67,7 @@ def create_app(app_name: str, redis_conn=None, testing=False) -> Sanic:
 
     # EventProcessor class is used to interact with Redis queues
     sanic_event_processor = EventProcessor(
-        events=event_types, prefix="event", redis_conn=redis_conn
+        stream_name="event", redis_conn=redis_conn
     )
 
     # Prometheus metrics endpoint
@@ -153,7 +153,7 @@ def create_app(app_name: str, redis_conn=None, testing=False) -> Sanic:
             event_types_counter.labels(event_name).inc()
 
             sanic_event_processor.push_event_to_queue(
-                event_name, gitlab_event, prefix="event"
+                event_name, gitlab_event, stream_name="event"
             )
 
             return sanic_json({"message": "Event received"})
