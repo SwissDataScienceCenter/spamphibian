@@ -2,7 +2,7 @@ import unittest
 import json
 from sanic_testing import TestManager
 import logging
-from test.mock_redis import MockRedis
+import fakeredis
 from common.constants import event_types
 from event_service.main import create_app
 
@@ -13,7 +13,7 @@ logging.basicConfig(
 
 class TestEventService(unittest.TestCase):
     def setUp(self):
-        self.redis_mock = MockRedis()
+        self.redis_mock = fakeredis.FakeRedis()
         self.app = create_app("TestApp", redis_conn=self.redis_mock, testing=True)
         self.test_manager = TestManager(self.app)
 
@@ -29,23 +29,23 @@ class TestEventService(unittest.TestCase):
             test_cases.append(
                 (
                     event_type,
-                    json_data[event_type],
-                    f"event_{event_type}",
+                    json_data[event_type]
                 )
             )
 
         for (
-            input_event_type,
+            event_type,
             event_data,
-            output_event_type,
         ) in test_cases:
             with self.subTest(
-                input_event_type=input_event_type,
+                input_event_type=event_type,
                 event_data=event_data,
-                output_event_type=output_event_type,
+                output_event_type=event_type,
             ):
-                logging.info(f"Testing event type: {input_event_type}")
+                logging.info(f"Testing event type: {event_type}")
+                print(f"Testing event type: {event_type}")
 
+                print(f"Sending request to event service. Output queue length: {self.redis_mock.xlen('event')}")
                 request, response = self.test_manager.test_client.post(
                     "/event", data=event_data
                 )
@@ -53,11 +53,20 @@ class TestEventService(unittest.TestCase):
                 self.assertEqual(response.status, 200)
                 self.assertDictEqual(response.json, {"message": "Event received"})
 
-                output_value = self.redis_mock.get(output_event_type)
+                messages = self.redis_mock.xread({"event": '0'}, block=1000, count=1)
+                if messages:
+                    for message in messages[0][1]:
+                        for key in message[1].keys():
+                            decoded_key = key.decode('utf-8')
+                            decoded_value = message[1][key].decode('utf-8')
 
-                logging.debug("Testing: output queue data: %s", output_value)
-                self.assertIsNotNone(output_value)
-                self.assertIn(event_data, output_value)
+                            self.assertIsNotNone(decoded_value)
+                            self.assertIn(event_data, decoded_value)
+
+                            print("Deleting message %s from output queue", message[0])
+                            self.redis_mock.xtrim('event', maxlen=0)
+                
+                print
 
 
 if __name__ == "__main__":
