@@ -303,8 +303,8 @@ def format_message(event_type, data):
 # SlackNotifier class, inherits from EventProcessor.
 # Used to retrieve events from Redis and send them to Slack.
 class SlackNotifier(EventProcessor):
-    def __init__(self, slack_webhook_url, stream_name, redis_conn=None):
-        super().__init__(stream_name, redis_conn)
+    def __init__(self, slack_webhook_url, input_stream_name, redis_conn=None):
+        super().__init__(input_stream_name, "", redis_conn)
         self.slack_webhook_url = slack_webhook_url
 
         prometheus_multiproc_dir = "prometheus_multiproc_dir"
@@ -361,7 +361,7 @@ def main(
         slack_webhook_url, "classification", redis_conn=redis_conn
     )
 
-    notifier.poll_and_process_event()
+    notifier.poll_and_process_event(testing=testing)
 
 
 if __name__ == "__main__":

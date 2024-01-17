@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import json
-from test.mock_redis import MockRedis
+import fakeredis
 
 from notification_service.main import main
 
@@ -13,7 +13,7 @@ class TestSlackNotifier(unittest.TestCase):
         mock_response.status_code = 200
         mock_post.return_value = mock_response
 
-        redis_conn = MockRedis()
+        redis_conn = fakeredis.FakeRedis()
 
         expected_response = {
             "blocks": [
@@ -63,7 +63,6 @@ class TestSlackNotifier(unittest.TestCase):
             ]
         }
 
-        queue = "classification_user_create"
         message = json.dumps(
             {
                 "event_data": {
@@ -81,11 +80,11 @@ class TestSlackNotifier(unittest.TestCase):
             }
         )
 
-        redis_conn.lpush(queue, message)
+        redis_conn.xadd("classification", {"user_create": message})
 
         main(redis_conn=redis_conn, slack_webhook_url="http://slack.com", testing=True)
 
-        mock_post.assert_called_once_with("http://slack.com", json=expected_response)
+        mock_post.assert_called_once_with("http://slack.com", json=expected_response, timeout=10)
 
 
 if __name__ == "__main__":
