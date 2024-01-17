@@ -17,7 +17,7 @@ logging.basicConfig(
 
 class GitlabUserSpamClassifier(EventProcessor):
     def __init__(self, redis_conn=None, model_url="http://127.0.0.1:5001"):
-        super().__init__("retrieval", redis_conn=redis_conn)
+        super().__init__("retrieval", "classification", redis_conn=redis_conn)
         self.model_url = model_url
 
         prometheus_multiproc_dir = "prometheus_multiproc_dir"
@@ -106,12 +106,12 @@ class GitlabUserSpamClassifier(EventProcessor):
             }
         )
 
-        self.push_event_to_queue(event_type, results, stream_name="classification")
+        self.push_event_to_queue(event_type, results)
 
         self.event_types.labels(type=event_type).inc()
 
     def run(self, testing=False):
-        self.poll_and_process_event()
+        self.poll_and_process_event(testing=testing)
 
 
 def main():

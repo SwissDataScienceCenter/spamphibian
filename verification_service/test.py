@@ -3,37 +3,22 @@ from unittest.mock import patch
 import json
 import responses
 import copy
+import fakeredis
 
 from verification_service.main import process_events, app
-
-from test.mock_redis import MockRedis
 
 
 class TestVerificationService(unittest.TestCase):
     def setUp(self):
-        self.redis_mock = MockRedis()
+        self.redis_mock = fakeredis.FakeRedis()
         self.redis_class_patch = patch("redis.StrictRedis", autospec=True)
-        self.sleep_patch = patch(
-            "verification_service.main.sleep", side_effect=self.mock_sleep
-        )
 
         # Start patches
         self.mock_redis_class = self.redis_class_patch.start()
-        self.mock_sleep = self.sleep_patch.start()
 
     def tearDown(self):
         # Stop patches
         self.redis_class_patch.stop()
-        self.sleep_patch.stop()
-
-    # Counter for the number of times mock_sleep is called
-    sleep_counter = 0
-
-    def mock_sleep(self, time_to_sleep):
-        self.sleep_counter += 1
-        print("Sleeping for 1 second...")
-        if self.sleep_counter > 10:
-            raise KeyboardInterrupt()
 
     def test_process_events(self):
         event_types = [
@@ -75,9 +60,8 @@ class TestVerificationService(unittest.TestCase):
             # true cases, i.e. not verified
             test_cases.append(
                 (
-                    f"event_{event_type}",
+                    event_type,
                     json_data[event_type],
-                    f"verification_{event_type}",
                     True,
                 )
             )
@@ -87,14 +71,13 @@ class TestVerificationService(unittest.TestCase):
                 for group_id in ["2", "3"]:
                     test_cases.append(
                         (
-                            "event_group_create",
+                            "group_create",
                             json_data[event_type].replace("1", group_id),
-                            "verification_group_create",
                             False,
                         )
                     )
 
-                    mock_api_responses["event_group_create_1"] = copy.deepcopy(
+                    mock_api_responses["group_create_1"] = copy.deepcopy(
                         group_members_response
                     )
 
@@ -103,27 +86,26 @@ class TestVerificationService(unittest.TestCase):
                         "non-verified-user@non-verified-domain.com",
                         "user@verified-domain.gov",
                     )
-                    mock_api_responses["event_group_create_2"] = patched_data
+                    mock_api_responses["group_create_2"] = patched_data
 
                     patched_data = copy.deepcopy(patched_data)
                     patched_data[1]["email"] = patched_data[1]["email"].replace(
                         "user@verified-domain.gov",
                         "verified-user@non-verified-domain.com",
                     )
-                    mock_api_responses["event_group_create_3"] = patched_data
+                    mock_api_responses["group_create_3"] = patched_data
 
             elif event_type == "group_rename":
                 for group_id in ["6", "7"]:
                     test_cases.append(
                         (
-                            "event_group_rename",
+                            "group_rename",
                             json_data[event_type].replace("5", group_id),
-                            "verification_group_rename",
                             False,
                         )
                     )
 
-                mock_api_responses["event_group_rename_5"] = copy.deepcopy(
+                mock_api_responses["group_rename_5"] = copy.deepcopy(
                     group_members_response
                 )
 
@@ -132,23 +114,22 @@ class TestVerificationService(unittest.TestCase):
                     "non-verified-user@non-verified-domain.com",
                     "user@verified-domain.gov",
                 )
-                mock_api_responses["event_group_rename_6"] = patched_data
+                mock_api_responses["group_rename_6"] = patched_data
 
                 patched_data = copy.deepcopy(patched_data)
                 patched_data[1]["email"] = patched_data[1]["email"].replace(
                     "user@verified-domain.gov", "verified-user@non-verified-domain.com"
                 )
-                mock_api_responses["event_group_rename_7"] = patched_data
+                mock_api_responses["group_rename_7"] = patched_data
 
             else:
                 for replacement in email_replacements:
                     test_cases.append(
                         (
-                            f"event_{event_type}",
+                            event_type,
                             json_data[event_type].replace(
                                 "non-verified-user@non-verified-domain.com", replacement
                             ),
-                            f"verification_{event_type}",
                             False,
                         )
                     )
@@ -161,21 +142,20 @@ class TestVerificationService(unittest.TestCase):
 
         test_cases.append(
             (
-                "event_snippet_check",
+                "snippet_check",
                 json_data["snippet_check"],
-                "verification_snippet_check",
                 True,
             )
         )
 
         # Set up mock API responses for group members queries
         group_id_to_key = {
-            1: "event_group_create_1",
-            2: "event_group_create_2",
-            3: "event_group_create_3",
-            5: "event_group_rename_5",
-            6: "event_group_rename_6",
-            7: "event_group_rename_7",
+            1: "group_create_1",
+            2: "group_create_2",
+            3: "group_create_3",
+            5: "group_rename_5",
+            6: "group_rename_6",
+            7: "group_rename_7",
         }
 
         for group_id, key in group_id_to_key.items():
@@ -189,40 +169,57 @@ class TestVerificationService(unittest.TestCase):
         responses.start()
 
         for (
-            input_event_type,
+            event_type,
             event_data,
-            output_event_type,
             output_value_expected,
         ) in test_cases:
             with self.subTest(
-                input_event_type=input_event_type,
+                event_type=event_type,
                 event_data=event_data,
-                output_event_type=output_event_type,
                 output_value_expected=output_value_expected,
             ):
-                mock_redis = MockRedis()
-                self.mock_redis_class.return_value = mock_redis
+                print(f"Testing event type: {event_type}, output value expected: {output_value_expected}")
 
-                mock_redis.lpush(input_event_type, event_data)
+                self.redis_mock.xadd("event", {event_type: json.dumps(event_data)})
 
                 try:
+                    print(f"Start processing event: {event_type}. Input stream messages: {self.redis_mock.xlen('event')} Output stream messages: {self.redis_mock.xlen('verification')}")
                     process_events(
                         verified_domains_file="verification_service/verified_domains.yaml",
                         verified_users_file="verification_service/verified_users.yaml",
                         gitlab_url="http://gitlab.com",
                         gitlab_access_token="1234567890",
-                        redis_conn=mock_redis,
+                        redis_conn=self.redis_mock,
+                        testing=True,
                     )
+                    print(f"Finished processing event: {event_type}. Input stream messages: {self.redis_mock.xlen('event')} Output stream messages: {self.redis_mock.xlen('verification')}")
+
+                    if output_value_expected == False:
+                        queue_length = self.redis_mock.xlen('verification')
+                        if queue_length > 0:
+                            print("Output stream contains unexpected message(s): ", self.redis_mock.xrange('verification', count=queue_length))
+                        self.assertEqual(self.redis_mock.xlen('verification'), 0)
+                    else:
+                        messages = self.redis_mock.xread({"verification": '0'}, block=1000, count=1)
+                        if messages:
+                            for message in messages[0][1]:
+                                for key in message[1].keys():
+                                    decoded_key = key.decode('utf-8')
+                                    decoded_value = json.loads(message[1][key].decode('utf-8'))
+
+                                    print(f"Message in output stream arrived: {decoded_key}")
+
+                                    self.assertIsNotNone(decoded_value)
+                                    self.assertIn(event_data, decoded_value)
+
+                                    print("Clearing all messages from output stream")
+                                    self.redis_mock.xtrim('verification', maxlen=0)
+
+                    print("\n-----------------\n")
                 except KeyboardInterrupt:
                     pass
 
-                output_value = mock_redis.get(output_event_type)
-                if output_value_expected:
-                    self.assertIsNotNone(output_value)
-                    self.assertIn(event_data, output_value)
-                else:
-                    if output_value is not None:
-                        self.assertNotIn(event_data, output_value)
+
 
 
 class TestEmailVerificationAPI(unittest.TestCase):

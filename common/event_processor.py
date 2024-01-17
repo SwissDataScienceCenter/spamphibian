@@ -7,8 +7,9 @@ import os
 # EventProcessor class is used to process events from Redis streams
 # and add events back into to Redis streams after processing.
 class EventProcessor:
-    def __init__(self, stream_name, redis_conn=None):
-        self.event_stream_name = stream_name
+    def __init__(self, input_stream_name, output_stream_name, redis_conn=None):
+        self.input_stream_name = input_stream_name
+        self.output_stream_name = output_stream_name
 
         if redis_conn:
             self.redis_client = redis_conn
@@ -89,9 +90,9 @@ class EventProcessor:
                 password=REDIS_PASSWORD,
             )
 
-    def poll_and_process_event(self):
+    def poll_and_process_event(self, testing=False):
         while True:
-            messages = self.redis_client.xread({self.event_stream_name: '0'}, block=10000, count=1)
+            messages = self.redis_client.xread({self.input_stream_name: '0'}, block=10000, count=1)
             if messages:
                 for message in messages[0][1]:
                     message_id = message[0]
@@ -101,19 +102,26 @@ class EventProcessor:
                             f"{self.__class__.__name__}: processing event {decoded_key}"
                         )
                         data = json.loads(message[1][key].decode('utf-8'))
+
+                        print(f"Processing message {message_id} from {self.input_stream_name}")
+
                         self.process_event(decoded_key, data)
 
-                    # Delete the message from the stream after processing
-                    self.redis_client.xdel(self.event_stream_name, message_id)
+                        # Delete the message from the stream after processing
+                        self.redis_client.xdel(self.input_stream_name, message_id)
+                        print(f"Deleted message {message_id} from {self.input_stream_name}")
+
+                if testing:
+                    return
 
     def process_event(self, event_type, data):
         raise NotImplementedError("Child classes must implement this method")
 
-    def push_event_to_queue(self, event_type, data, stream_name=None):
+    def push_event_to_queue(self, event_type, data):
         serialized_data = json.dumps(data)
 
         try:
-            self.redis_client.xadd(stream_name, {event_type: serialized_data})
-            logging.debug(f"{self.__class__.__name__}: added data to {stream_name}")
+            self.redis_client.xadd(self.output_stream_name, {event_type: serialized_data})
+            logging.debug(f"{self.__class__.__name__}: added data to {self.output_stream_name}")
         except Exception as e:
-            logging.error(f"Error adding data to stream {stream_name}: {e}")
+            logging.error(f"Error adding data to stream {self.output_stream_name}: {e}")

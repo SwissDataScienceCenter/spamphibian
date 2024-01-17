@@ -6,6 +6,7 @@ import yaml
 from prometheus_client import multiprocess, CollectorRegistry, Counter
 from flask import Flask, request, jsonify
 from threading import Thread
+import json
 
 from common.event_processor import EventProcessor
 
@@ -114,6 +115,7 @@ def check_user_verification(email, verified_users_file):
 
 
 def get_user_email_address(event_type, event_data):
+    event_data = json.loads(event_data)
     if event_type in project_events:
         return event_data.get("owner_email")
 
@@ -138,14 +140,15 @@ def get_user_email_address(event_type, event_data):
 class VerificationEventProcessor(EventProcessor):
     def __init__(
         self,
-        stream_name,
+        input_stream_name,
+        output_stream_name,
         redis_conn=None,
         verified_users_file=None,
         verified_domains_file=None,
         gitlab_url=None,
         gitlab_access_token=None,
     ):
-        super().__init__(stream_name, redis_conn)
+        super().__init__(input_stream_name, output_stream_name, redis_conn)
         self.verified_users_file = verified_users_file
         self.verified_domains_file = verified_domains_file
         self.gitlab_url = gitlab_url
@@ -177,7 +180,9 @@ class VerificationEventProcessor(EventProcessor):
             )
             max_access_level = 0
             user_id_with_max_access = None
+            data = json.loads(data)
             group_id = data.get("group_id")
+            data = json.dumps(data)
 
             # Get all members of the group
             response = requests.get(
@@ -259,7 +264,7 @@ class VerificationEventProcessor(EventProcessor):
         # is verified, log the situation and return.
         if not user_verified:
             verification_failures_total.inc()
-            self.push_event_to_queue(event_type, data, stream_name="verification")
+            self.push_event_to_queue(event_type, data)
             logging.debug(
                 f"Pushed event to queue: verification_{event_type}"
             )
@@ -276,9 +281,11 @@ def process_events(
     verified_domains_file=None,
     gitlab_url=None,
     gitlab_access_token=None,
+    testing=False,
 ):
     processor = VerificationEventProcessor(
-        "event",
+        input_stream_name="event",
+        output_stream_name="verification",
         redis_conn=redis_conn,
         verified_users_file=verified_users_file,
         verified_domains_file=verified_domains_file,
@@ -286,7 +293,9 @@ def process_events(
         gitlab_access_token=gitlab_access_token,
     )
 
-    processor.poll_and_process_event()
+    print("Verification service starting")
+    processor.poll_and_process_event(testing=testing)
+    print("Verification service stopping")
 
 
 def main():

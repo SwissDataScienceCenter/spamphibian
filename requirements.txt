@@ -9,3 +9,5 @@ Werkzeug
 pyyaml
 responses
 sanic-testing
+fakeredis
+pytest
