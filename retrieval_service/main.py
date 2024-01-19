@@ -9,7 +9,6 @@ from common.constants import (
     issue_events,
     issue_note_events,
     group_events,
-    event_types,
 )
 
 from common.event_processor import EventProcessor
@@ -25,7 +24,7 @@ logging.basicConfig(
 # It is used to retrieve data from GitLab using the GitLab API.
 class GitlabRetrievalProcessor(EventProcessor):
     def __init__(self, GITLAB_URL, GITLAB_ACCESS_TOKEN, redis_conn=None, testing=False):
-        super().__init__("verification", redis_conn)
+        super().__init__("verification", "retrieval", redis_conn)
         self.gitlab_client = gitlab.Gitlab(
             GITLAB_URL, private_token=GITLAB_ACCESS_TOKEN
         )
@@ -116,9 +115,8 @@ class GitlabRetrievalProcessor(EventProcessor):
         except Exception as e:
             logging.error(f"Error adding data to queue {stream_name}: {e}")
 
-    def run(self):
-        while True:
-            self.poll_and_process_event()
+    def run(self, testing=False):
+        self.poll_and_process_event(testing=testing)
 
 def main(
     GITLAB_URL=os.getenv("GITLAB_URL"),
@@ -129,7 +127,7 @@ def main(
     processor = GitlabRetrievalProcessor(
         GITLAB_URL, GITLAB_ACCESS_TOKEN, redis_conn=redis_conn, testing=testing
     )
-    processor.run()
+    processor.run(testing=testing)
 
 
 if __name__ == "__main__":
