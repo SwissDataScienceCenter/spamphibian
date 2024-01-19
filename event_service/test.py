@@ -57,7 +57,6 @@ class TestEventService(unittest.TestCase):
                 if messages:
                     for message in messages[0][1]:
                         for key in message[1].keys():
-                            decoded_key = key.decode('utf-8')
                             decoded_value = message[1][key].decode('utf-8')
 
                             self.assertIsNotNone(decoded_value)

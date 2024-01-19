@@ -194,7 +194,7 @@ class TestVerificationService(unittest.TestCase):
                     )
                     print(f"Finished processing event: {event_type}. Input stream messages: {self.redis_mock.xlen('event')} Output stream messages: {self.redis_mock.xlen('verification')}")
 
-                    if output_value_expected == False:
+                    if output_value_expected is False:
                         queue_length = self.redis_mock.xlen('verification')
                         if queue_length > 0:
                             print("Output stream contains unexpected message(s): ", self.redis_mock.xrange('verification', count=queue_length))

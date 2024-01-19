@@ -3,8 +3,6 @@ import logging
 import requests
 import os
 
-from common.constants import event_types
-
 from common.event_processor import EventProcessor
 
 from prometheus_client import multiprocess, CollectorRegistry, Counter, Histogram

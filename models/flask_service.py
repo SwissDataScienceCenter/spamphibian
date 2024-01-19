@@ -4,7 +4,6 @@ import pandas as pd
 import pickle
 from sklearn.base import BaseEstimator, TransformerMixin
 import tensorflow as tf
-import numpy as np
 
 app = Flask(__name__)
 api = Api(app)
