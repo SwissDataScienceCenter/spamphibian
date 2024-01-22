@@ -116,7 +116,6 @@ def check_user_verification(email, verified_users_file):
 
 
 def get_user_email_address(event_type, event_data):
-    event_data = json.loads(event_data)
     if event_type in [e.value for e in ProjectEvent]:
         return event_data.get("owner_email")
 
@@ -181,9 +180,7 @@ class VerificationEventProcessor(EventProcessor):
             )
             max_access_level = 0
             user_id_with_max_access = None
-            data = json.loads(data)
             group_id = data.get("group_id")
-            data = json.dumps(data)
 
             # Get all members of the group
             response = requests.get(

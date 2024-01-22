@@ -61,7 +61,7 @@ class TestVerificationService(unittest.TestCase):
             # load json data from file
             with open(f"test/json_data/{event_type}.json", "r") as file:
                 data = json.load(file)
-            json_data[event_type] = json.dumps(data)
+            json_data[event_type] = data
 
             # true cases, i.e. not verified
             test_cases.append(
@@ -75,10 +75,12 @@ class TestVerificationService(unittest.TestCase):
             # false cases, i.e. verified domains / users
             if event_type == GroupEvent.GROUP_CREATE.value:
                 for group_id in ["2", "3"]:
+                    modified_json_data = json_data[event_type].copy()
+                    modified_json_data['group_id'] = group_id
                     test_cases.append(
                         (
                             GroupEvent.GROUP_CREATE.value,
-                            json_data[event_type].replace("1", group_id),
+                            modified_json_data,
                             False,
                         )
                     )
@@ -103,10 +105,12 @@ class TestVerificationService(unittest.TestCase):
 
             elif event_type == GroupEvent.GROUP_RENAME.value:
                 for group_id in ["6", "7"]:
+                    modified_json_data = json_data[event_type].copy()
+                    modified_json_data['group_id'] = group_id
                     test_cases.append(
                         (
                             GroupEvent.GROUP_RENAME.value,
-                            json_data[event_type].replace("5", group_id),
+                            modified_json_data,
                             False,
                         )
                     )
@@ -130,15 +134,18 @@ class TestVerificationService(unittest.TestCase):
 
             else:
                 for replacement in email_replacements:
-                    test_cases.append(
-                        (
-                            event_type,
-                            json_data[event_type].replace(
-                                "non-verified-user@non-verified-domain.com", replacement
-                            ),
-                            False,
+                    modified_json_data = json_data[event_type].copy()
+                    if 'email' in modified_json_data:
+                        modified_json_data['email'] = modified_json_data['email'].replace(
+                            "non-verified-user@non-verified-domain.com", replacement
                         )
-                    )
+                        test_cases.append((event_type, modified_json_data, False))
+                    elif 'owner_email' in modified_json_data:
+                        modified_json_data['owner_email'] = modified_json_data['owner_email'].replace(
+                            "non-verified-user@non-verified-domain.com", replacement
+                        )
+                        test_cases.append((event_type, modified_json_data, False))
+
 
         # Test case for snippet check
         # load json data from file
@@ -216,7 +223,7 @@ class TestVerificationService(unittest.TestCase):
                                     print(f"Message in output stream arrived: {decoded_key}")
 
                                     self.assertIsNotNone(decoded_value)
-                                    self.assertIn(event_data, decoded_value)
+                                    self.assertEqual(event_data, decoded_value)
 
                                     print("Clearing all messages from output stream")
                                     self.redis_mock.xtrim('verification', maxlen=0)
