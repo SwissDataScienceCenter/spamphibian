@@ -4,7 +4,14 @@ import json
 import responses
 import copy
 import fakeredis
-from common.constants import *
+from common.constants import (
+    UserEvent,
+    ProjectEvent,
+    GroupEvent,
+    SnippetEvent,
+    IssueNoteEvent,
+    IssueEvent,
+)
 
 from verification_service.main import process_events, app
 

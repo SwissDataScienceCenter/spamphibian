@@ -3,7 +3,14 @@ import json
 from sanic_testing import TestManager
 import logging
 import fakeredis
-from common.constants import *
+from common.constants import (
+    UserEvent,
+    ProjectEvent,
+    GroupEvent,
+    SnippetEvent,
+    IssueNoteEvent,
+    IssueEvent,
+)
 from event_service.main import create_app
 
 logging.basicConfig(

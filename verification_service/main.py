@@ -10,7 +10,14 @@ import json
 
 from common.event_processor import EventProcessor
 
-from common.constants import *
+from common.constants import (
+    UserEvent,
+    ProjectEvent,
+    GroupEvent,
+    SnippetEvent,
+    IssueNoteEvent,
+    IssueEvent,
+)
 
 LOGLEVEL = os.environ.get('LOGLEVEL', 'WARNING').upper()
 logging.basicConfig(
