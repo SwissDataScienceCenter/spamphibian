@@ -35,16 +35,20 @@ class EventProcessor:
         REDIS_DB = int(os.getenv("REDIS_DB", 0))
         REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None
 
+        redis_sentinel_password_display = '*****' if REDIS_SENTINEL_PASSWORD else 'Not provided'
+        redis_password_display = '*****' if REDIS_PASSWORD else 'Not provided'
+
+        # Logging the debug message
         logging.debug("\n".join([
             "Redis config:",
             f"REDIS_SENTINEL_ENABLED: {REDIS_SENTINEL_ENABLED}",
             f"REDIS_SENTINEL_HOSTS: {REDIS_SENTINEL_HOSTS}",
-            f"REDIS_SENTINEL_PASSWORD: {REDIS_SENTINEL_PASSWORD}",
+            f"REDIS_SENTINEL_PASSWORD: {redis_sentinel_password_display}",
             f"REDIS_MASTER_SET: {REDIS_MASTER_SET}",
             f"REDIS_HOST: {REDIS_HOST}",
             f"REDIS_PORT: {REDIS_PORT}",
             f"REDIS_DB: {REDIS_DB}",
-            f"REDIS_PASSWORD: {REDIS_PASSWORD}",
+            f"REDIS_PASSWORD: {redis_password_display}",
         ]))
 
         if REDIS_SENTINEL_ENABLED:
