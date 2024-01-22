@@ -290,9 +290,7 @@ def process_events(
         gitlab_access_token=gitlab_access_token,
     )
 
-    print("Verification service starting")
     processor.poll_and_process_event(testing=testing)
-    print("Verification service stopping")
 
 
 def main():
