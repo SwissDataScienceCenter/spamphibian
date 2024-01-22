@@ -177,8 +177,6 @@ class VerificationEventProcessor(EventProcessor):
             logging.info(
                 f"{event_type} event type received, getting user email from GitLab API"
             )
-            max_access_level = 0
-            user_id_with_max_access = None
             group_id = data.get("group_id")
 
             # Get all members of the group
@@ -205,6 +203,8 @@ class VerificationEventProcessor(EventProcessor):
                 return
 
             # Get the user with the highest access level in the group
+            max_access_level = 0
+            user_id_with_max_access = None
             for member in group_members:
                 access_level = member.get("access_level")
                 if access_level > max_access_level:
