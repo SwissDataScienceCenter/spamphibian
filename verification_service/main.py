@@ -6,7 +6,6 @@ import yaml
 from prometheus_client import multiprocess, CollectorRegistry, Counter
 from flask import Flask, request, jsonify
 from threading import Thread
-import json
 
 from common.event_processor import EventProcessor
 
