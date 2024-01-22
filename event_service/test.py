@@ -3,7 +3,7 @@ import json
 from sanic_testing import TestManager
 import logging
 import fakeredis
-from common.constants import event_types
+from common.constants import *
 from event_service.main import create_app
 
 logging.basicConfig(
@@ -21,7 +21,21 @@ class TestEventService(unittest.TestCase):
         json_data = {}
         test_cases = []
 
-        for event_type in event_types:
+        all_event_types = [
+            e.value for e in UserEvent
+        ] + [
+            e.value for e in ProjectEvent
+        ] + [
+            e.value for e in GroupEvent
+        ] + [
+            e.value for e in IssueEvent
+        ] + [
+            e.value for e in IssueNoteEvent
+        ] + [
+            e.value for e in SnippetEvent
+        ]
+
+        for event_type in all_event_types:
             with open(f"test/json_data/{event_type}.json", "r") as file:
                 data = json.load(file)
             json_data[event_type] = json.dumps(data)

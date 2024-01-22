@@ -2,6 +2,7 @@ import unittest
 from common.event_processor import EventProcessor
 import fakeredis
 import json
+from common.constants import UserEvent
 
 class TestEventProcessor(unittest.TestCase):
 
@@ -14,11 +15,11 @@ class TestEventProcessor(unittest.TestCase):
 
     def test_poll_and_process_event(self):
         event_data = {"username": "test_user", "some_data": "data"}
-        self.redis_conn.xadd("retrieval", {"user_create": json.dumps(event_data)})
+        self.redis_conn.xadd("retrieval", {UserEvent.USER_CREATE.value: json.dumps(event_data)})
     
     def test_add_event_to_queue(self):
         event_data = {"test_key": "test_value"}
-        self.event_processor.push_event_to_queue("user_create", event_data)
+        self.event_processor.push_event_to_queue(UserEvent.USER_CREATE.value, event_data)
 
         while True:
             messages = self.redis_conn.xread({self.event_processor.output_stream_name: '0'}, block=10000, count=1)

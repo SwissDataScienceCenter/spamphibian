@@ -4,6 +4,7 @@ import json
 import responses
 import copy
 import fakeredis
+from common.constants import *
 
 from verification_service.main import process_events, app
 
@@ -22,19 +23,17 @@ class TestVerificationService(unittest.TestCase):
 
     def test_process_events(self):
         event_types = [
-            "project_create",
-            "project_rename",
-            "project_transfer",
-            "user_create",
-            "user_rename",
-            "issue_open",
-            "issue_reopen",
-            "issue_update",
-            "issue_close",
-            "issue_note_create",
-            "group_create",
-            "group_rename",
-            "snippet_check",
+            e.value for e in UserEvent
+        ] + [
+            e.value for e in ProjectEvent
+        ] + [
+            e.value for e in GroupEvent
+        ] + [
+            e.value for e in IssueEvent
+        ] + [
+            e.value for e in IssueNoteEvent
+        ] + [
+            e.value for e in SnippetEvent
         ]
         email_replacements = [
             "user@verified-domain.gov",
@@ -48,7 +47,7 @@ class TestVerificationService(unittest.TestCase):
             group_members_response = json.load(file)
 
         webhook_event_types = [
-            event_type for event_type in event_types if event_type != "snippet_check"
+            event_type for event_type in event_types if event_type != SnippetEvent.SNIPPET_CHECK.value
         ]
 
         for event_type in webhook_event_types:
@@ -67,11 +66,11 @@ class TestVerificationService(unittest.TestCase):
             )
 
             # false cases, i.e. verified domains / users
-            if event_type == "group_create":
+            if event_type == GroupEvent.GROUP_CREATE.value:
                 for group_id in ["2", "3"]:
                     test_cases.append(
                         (
-                            "group_create",
+                            GroupEvent.GROUP_CREATE.value,
                             json_data[event_type].replace("1", group_id),
                             False,
                         )
@@ -95,11 +94,11 @@ class TestVerificationService(unittest.TestCase):
                     )
                     mock_api_responses["group_create_3"] = patched_data
 
-            elif event_type == "group_rename":
+            elif event_type == GroupEvent.GROUP_RENAME.value:
                 for group_id in ["6", "7"]:
                     test_cases.append(
                         (
-                            "group_rename",
+                            GroupEvent.GROUP_RENAME.value,
                             json_data[event_type].replace("5", group_id),
                             False,
                         )
@@ -138,12 +137,12 @@ class TestVerificationService(unittest.TestCase):
         # load json data from file
         with open("test/json_data/snippet_check.json", "r") as file:
             data = json.load(file)
-        json_data["snippet_check"] = json.dumps(data)
+        json_data[SnippetEvent.SNIPPET_CHECK.value] = json.dumps(data)
 
         test_cases.append(
             (
-                "snippet_check",
-                json_data["snippet_check"],
+                SnippetEvent.SNIPPET_CHECK.value,
+                json_data[SnippetEvent.SNIPPET_CHECK.value],
                 True,
             )
         )

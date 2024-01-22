@@ -16,10 +16,11 @@ from common.event_processor import EventProcessor
 from functools import partial
 
 from common.constants import (
-    project_events,
-    user_events,
-    group_events,
-    snippet_events,
+    UserEvent,
+    ProjectEvent,
+    GroupEvent,
+    SnippetEvent,
+    IssueNoteEvent,
 )
 
 LOGLEVEL = os.environ.get('LOGLEVEL', 'WARNING').upper()
@@ -123,9 +124,9 @@ def create_app(app_name: str, redis_conn=None, testing=False) -> Sanic:
                             gitlab_event["object_attributes"]["created_at"]
                             == gitlab_event["object_attributes"]["updated_at"]
                         ):
-                            event_name = "issue_note_create"
+                            event_name = IssueNoteEvent.ISSUE_NOTE_CREATE.value
                         else:
-                            event_name = "issue_note_update"
+                            event_name = IssueNoteEvent.ISSUE_NOTE_UPDATE.value
 
                 except KeyError:
                     logging.debug(
@@ -134,10 +135,10 @@ def create_app(app_name: str, redis_conn=None, testing=False) -> Sanic:
 
             # Determine project, user, group, and snippet-related events
             elif (
-                event_name in project_events
-                or event_name in user_events
-                or event_name in group_events
-                or event_name in snippet_events
+                event_name in [e.value for e in ProjectEvent]
+                or event_name in [e.value for e in UserEvent]
+                or event_name in [e.value for e in GroupEvent]
+                or event_name in [e.value for e in SnippetEvent]
             ):
                 event_name = event_name
 

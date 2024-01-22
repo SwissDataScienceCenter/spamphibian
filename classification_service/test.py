@@ -3,6 +3,7 @@ from unittest.mock import patch, MagicMock
 from classification_service.main import GitlabUserSpamClassifier
 import json
 import fakeredis
+from common.constants import UserEvent
 
 
 class TestGitlabUserSpamClassifier(unittest.TestCase):
@@ -12,7 +13,7 @@ class TestGitlabUserSpamClassifier(unittest.TestCase):
 
         redis_conn.xadd(
             "retrieval",
-            {"user_create": json.dumps({"username": "test_user", "some_data": "data"})},
+            {UserEvent.USER_CREATE.value: json.dumps({"username": "test_user", "some_data": "data"})},
         )
 
         mock_response = MagicMock()
@@ -42,7 +43,7 @@ class TestGitlabUserSpamClassifier(unittest.TestCase):
                     decoded_key = key.decode('utf-8')
                     decoded_value = json.loads(message[1][key].decode('utf-8'))
 
-                    expected_key = "user_create"
+                    expected_key = UserEvent.USER_CREATE.value
                     expected_value ={
                         "event_data": {"username": "test_user", "some_data": "data"},
                         "prediction": "spam",

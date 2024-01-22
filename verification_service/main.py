@@ -10,13 +10,7 @@ import json
 
 from common.event_processor import EventProcessor
 
-from common.constants import (
-    project_events,
-    user_events,
-    issue_events,
-    issue_note_events,
-    group_events,
-)
+from common.constants import *
 
 LOGLEVEL = os.environ.get('LOGLEVEL', 'WARNING').upper()
 logging.basicConfig(
@@ -116,13 +110,13 @@ def check_user_verification(email, verified_users_file):
 
 def get_user_email_address(event_type, event_data):
     event_data = json.loads(event_data)
-    if event_type in project_events:
+    if event_type in [e.value for e in ProjectEvent]:
         return event_data.get("owner_email")
 
-    elif event_type in user_events:
+    elif event_type in [e.value for e in UserEvent]:
         return event_data.get("email")
 
-    elif event_type in issue_events + issue_note_events:
+    elif event_type in [e.value for e in IssueEvent] or event_type in [e.value for e in IssueNoteEvent]:
         user_attributes = event_data.get("user", {})
         return user_attributes.get("email")
 
@@ -164,17 +158,17 @@ class VerificationEventProcessor(EventProcessor):
         user_verified = False
 
         # Determine how to get the user email address based on event type
-        if (
-            event_type
-            in project_events + user_events + issue_events + issue_note_events
-        ):
+        if event_type in [e.value for e in ProjectEvent] \
+        or event_type in [e.value for e in UserEvent] \
+        or event_type in [e.value for e in IssueEvent] \
+        or event_type in [e.value for e in IssueNoteEvent]:
             user_email_address = get_user_email_address(event_type, data)
 
         # If the event is a group event, get the user email address by
         # getting all members of the group, and then checking the
         # verification status of the user with the highest access
         # level in the group.
-        elif event_type in group_events:
+        elif event_type in [e.value for e in GroupEvent]:
             logging.info(
                 f"{event_type} event type received, getting user email from GitLab API"
             )
@@ -228,7 +222,7 @@ class VerificationEventProcessor(EventProcessor):
 
         # If an email address is still not located and the event type
         # is not snippet_check, log the situation and return.
-        if user_email_address is None and event_type != "snippet_check":
+        if user_email_address is None and event_type != SnippetEvent.SNIPPET_CHECK.value:
             logging.debug(
                 f"Unable to get user email address for event type: {event_type}"
             )
@@ -236,7 +230,7 @@ class VerificationEventProcessor(EventProcessor):
 
         # If an email address is located, check if the user or their
         # email domain is verified.
-        elif user_email_address is not None and event_type != "snippet_check":
+        elif user_email_address is not None and event_type != SnippetEvent.SNIPPET_CHECK.value:
             user_verified = check_domain_verification(
                 user_email_address, self.verified_domains_file
             )
@@ -251,7 +245,7 @@ class VerificationEventProcessor(EventProcessor):
             )
 
         # Check if the event type is snippet_check.
-        elif event_type == "snippet_check":
+        elif event_type == SnippetEvent.SNIPPET_CHECK.value:
             logging.info(
                 "Snippet check event received."
                 "Individual snippet verification will be done at a later point."

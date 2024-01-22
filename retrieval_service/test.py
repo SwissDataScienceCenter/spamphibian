@@ -4,6 +4,7 @@ import json
 import logging
 from retrieval_service.main import main
 import fakeredis
+from common.constants import UserEvent
 
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -21,7 +22,7 @@ class TestService(unittest.TestCase):
         mock_user.to_json.return_value = json.dumps({"user_id": "123"})
         mock_gl.users.get.return_value = mock_user
 
-        redis_conn.xadd("verification", {"user_create": json.dumps({"user_id": "123"})})
+        redis_conn.xadd("verification", {UserEvent.USER_CREATE.value: json.dumps({"user_id": "123"})})
         print("Pushed message to input stream")
 
         main(

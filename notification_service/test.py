@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 import json
 import fakeredis
+from common.constants import UserEvent
 
 from notification_service.main import main
 
@@ -80,7 +81,7 @@ class TestSlackNotifier(unittest.TestCase):
             }
         )
 
-        redis_conn.xadd("classification", {"user_create": message})
+        redis_conn.xadd("classification", {UserEvent.USER_CREATE.value: message})
 
         main(redis_conn=redis_conn, slack_webhook_url="http://slack.com", testing=True)
 

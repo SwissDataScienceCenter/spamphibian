@@ -3,43 +3,30 @@
 # sent by GitLab System Hooks or derived from
 # the actions they represent.
 
-project_events = [
-    "project_create",
-    "project_rename",
-    "project_transfer",
-]
+from enum import Enum
 
-user_events = [
-    "user_create",
-    "user_rename",
-]
+class ProjectEvent(Enum):
+    PROJECT_CREATE = "project_create"
+    PROJECT_RENAME = "project_rename"
+    PROJECT_TRANSFER = "project_transfer"
 
-issue_events = [
-    "issue_open",
-    "issue_update",
-    "issue_close",
-    "issue_reopen",
-]
+class UserEvent(Enum):
+    USER_CREATE = "user_create"
+    USER_RENAME = "user_rename"
 
-issue_note_events = [
-    "issue_note_create",
-    "issue_note_update",
-]
+class IssueEvent(Enum):
+    ISSUE_OPEN = "issue_open"
+    ISSUE_UPDATE = "issue_update"
+    ISSUE_CLOSE = "issue_close"
+    ISSUE_REOPEN = "issue_reopen"
 
-group_events = [
-    "group_create",
-    "group_rename",
-]
+class IssueNoteEvent(Enum):
+    ISSUE_NOTE_CREATE = "issue_note_create"
+    ISSUE_NOTE_UPDATE = "issue_note_update"
 
-snippet_events = [
-    "snippet_check",
-]
+class GroupEvent(Enum):
+    GROUP_CREATE = "group_create"
+    GROUP_RENAME = "group_rename"
 
-event_types = (
-    user_events
-    + project_events
-    + issue_events
-    + issue_note_events
-    + group_events
-    + snippet_events
-)
+class SnippetEvent(Enum):
+    SNIPPET_CHECK = "snippet_check"

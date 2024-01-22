@@ -4,11 +4,11 @@ import os
 from prometheus_client import Counter, Histogram
 
 from common.constants import (
-    project_events,
-    user_events,
-    issue_events,
-    issue_note_events,
-    group_events,
+    UserEvent,
+    ProjectEvent,
+    IssueEvent,
+    IssueNoteEvent,
+    GroupEvent,
 )
 
 from common.event_processor import EventProcessor
@@ -43,22 +43,22 @@ class GitlabRetrievalProcessor(EventProcessor):
         with self.event_processing_time.time():
 
             # Determine how to retrieve data based on event type
-            if event_type in user_events:
+            if event_type in [e.value for e in UserEvent]:
                 gitlab_object = self._process_user_event(event_data)
-            elif event_type in project_events:
+            elif event_type in [e.value for e in ProjectEvent]:
                 gitlab_object = self._process_project_event(event_data)
-            elif event_type in issue_events:
+            elif event_type in [e.value for e in IssueEvent]:
                 gitlab_object = self._process_issue_event(event_data)
-            elif event_type in issue_note_events:
+            elif event_type in [e.value for e in IssueNoteEvent]:
                 gitlab_object = self._process_issue_note_event(event_data)
-            elif event_type in group_events:
+            elif event_type in [e.value for e in GroupEvent]:
                 gitlab_object = self._process_group_event(event_data)
             else:
                 logging.info(f"{self.__class__.__name__}: event {event_type} received")
                 return
 
-            self.events_processed.inc()
             if gitlab_object:
+                self.events_processed.inc()
                 self.push_event_to_queue(event_type, gitlab_object, stream_name="retrieval")
 
     def _process_user_event(self, event_data):

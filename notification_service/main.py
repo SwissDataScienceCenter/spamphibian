@@ -4,11 +4,11 @@ import logging
 import datetime
 
 from common.constants import (
-    project_events,
-    user_events,
-    issue_events,
-    issue_note_events,
-    group_events,
+    UserEvent,
+    ProjectEvent,
+    IssueEvent,
+    IssueNoteEvent,
+    GroupEvent,
 )
 
 from common.event_processor import EventProcessor
@@ -33,7 +33,7 @@ def format_message(event_type, data):
     prediction = data["prediction"]
     score = data["score"]
 
-    if event_type in user_events:
+    if event_type in [e.value for e in UserEvent]:
         message_format = {
             "blocks": [
                 {"type": "header", "text": {"type": "plain_text", "text": ""}},
@@ -88,12 +88,12 @@ def format_message(event_type, data):
                 }
             )
 
-        if event_type == "user_create":
+        if event_type == UserEvent.USER_CREATE.value:
             message_format["blocks"][0]["text"]["text"] = "User Created on GitLab"
-        elif event_type == "user_rename":
+        elif event_type == UserEvent.USER_RENAME.value:
             message_format["blocks"][0]["text"]["text"] = "User Renamed on GitLab"
 
-    elif event_type in issue_events:
+    elif event_type in [e.value for e in IssueEvent]:
         message_format = {
             "blocks": [
                 {"type": "header", "text": {"type": "plain_text", "text": ""}},
@@ -122,16 +122,16 @@ def format_message(event_type, data):
             ]
         }
 
-        if event_type == "issue_open":
+        if event_type == IssueEvent.ISSUE_OPEN.value:
             message_format["blocks"][0]["text"]["text"] = "Issue Opened on GitLab"
-        elif event_type == "issue_update":
+        elif event_type == IssueEvent.ISSUE_UPDATE.value:
             message_format["blocks"][0]["text"]["text"] = "Issue Updated on GitLab"
-        elif event_type == "issue_close":
+        elif event_type == IssueEvent.ISSUE_CLOSE.value:
             message_format["blocks"][0]["text"]["text"] = "Issue Closed on GitLab"
-        elif event_type == "issue_reopen":
+        elif event_type == IssueEvent.ISSUE_REOPEN.value:
             message_format["blocks"][0]["text"]["text"] = "Issue Reopened on GitLab"
 
-    elif event_type in group_events:
+    elif event_type in [e.value for e in GroupEvent]:
         created_at = datetime.datetime.strptime(
             event_data["created_at"], "%Y-%m-%dT%H:%M:%S.%fZ"
         )
@@ -172,12 +172,12 @@ def format_message(event_type, data):
             ]
         }
 
-        if event_type == "group_create":
+        if event_type == GroupEvent.GROUP_CREATE.value:
             message_format["blocks"][0]["text"]["text"] = "Group Created on GitLab"
-        elif event_type == "group_rename":
+        elif event_type == GroupEvent.GROUP_RENAME.value:
             message_format["blocks"][0]["text"]["text"] = "Group Renamed on GitLab"
 
-    elif event_type in issue_note_events:
+    elif event_type in [e.value for e in IssueNoteEvent]:
         created_at = datetime.datetime.strptime(
             event_data["created_at"], "%Y-%m-%dT%H:%M:%S.%fZ"
         )
@@ -232,12 +232,12 @@ def format_message(event_type, data):
             ]
         }
 
-        if event_type == "issue_note_create":
+        if event_type == IssueNoteEvent.ISSUE_NOTE_CREATE.value:
             message_format["blocks"][0]["text"]["text"] = "Issue Note Created on GitLab"
-        elif event_type == "issue_note_update":
+        elif event_type == IssueNoteEvent.ISSUE_NOTE_UPDATE.value:
             message_format["blocks"][0]["text"]["text"] = "Issue Note Updated on GitLab"
 
-    elif event_type in project_events:
+    elif event_type in [e.value for e in ProjectEvent]:
         created_at = datetime.datetime.strptime(
             event_data["created_at"], "%Y-%m-%dT%H:%M:%S.%fZ"
         )
@@ -288,11 +288,11 @@ def format_message(event_type, data):
             ]
         }
 
-        if event_type == "project_create":
+        if event_type == ProjectEvent.PROJECT_CREATE.value:
             message_format["blocks"][0]["text"]["text"] = "Project Created on GitLab"
-        elif event_type == "project_rename":
+        elif event_type == ProjectEvent.PROJECT_RENAME.value:
             message_format["blocks"][0]["text"]["text"] = "Project Renamed on GitLab"
-        elif event_type == "project_transfer":
+        elif event_type == ProjectEvent.PROJECT_TRANSFER.value:
             message_format["blocks"][0]["text"][
                 "text"
             ] = "Project Ownership Transferred on GitLab"
