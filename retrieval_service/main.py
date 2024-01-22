@@ -132,7 +132,5 @@ def main(
 
 if __name__ == "__main__":
     main(
-        GITLAB_URL=os.getenv("GITLAB_URL"),
-        GITLAB_ACCESS_TOKEN=os.getenv("GITLAB_ACCESS_TOKEN"),
         testing=False,
     )

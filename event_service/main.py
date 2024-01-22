@@ -62,7 +62,7 @@ request_latency_histogram = Histogram(
 
 # Sanic app
 def create_app(app_name: str, redis_conn=None, testing=False) -> Sanic:
-    app = Sanic("myApp")
+    app = Sanic("EventService")
 
     # EventProcessor class is used to interact with Redis queues
     sanic_event_processor = EventProcessor(
