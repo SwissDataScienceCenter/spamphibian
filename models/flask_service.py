@@ -57,6 +57,8 @@ class SnippetSpamClassifier(Resource):
     def post(self):
         data = request.get_json(force=True)
 
+        print(f"Snippet data received: {data}")
+
         return jsonify(
             {"prediction": "1", "score": 0.5}
         )
