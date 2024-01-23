@@ -18,7 +18,7 @@ class TestGitlabUserSpamClassifier(unittest.TestCase):
 
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {"prediction": "spam", "score": 0.9}
+        mock_response.json.return_value = {"prediction": 1, "score": 0.9}
         mock_requests_post.return_value = mock_response
 
         classifier = GitlabUserSpamClassifier(
