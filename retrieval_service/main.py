@@ -2,6 +2,8 @@ import logging
 import gitlab
 import os
 from prometheus_client import Counter, Histogram
+import requests
+import json
 
 from common.constants import (
     UserEvent,
@@ -9,6 +11,7 @@ from common.constants import (
     IssueEvent,
     IssueNoteEvent,
     GroupEvent,
+    SnippetEvent,
 )
 
 from common.event_processor import EventProcessor
@@ -53,6 +56,12 @@ class GitlabRetrievalProcessor(EventProcessor):
                 gitlab_object = self._process_issue_note_event(event_data)
             elif event_type in [e.value for e in GroupEvent]:
                 gitlab_object = self._process_group_event(event_data)
+            elif event_type in [e.value for e in SnippetEvent]:
+                gitlab_objects = self._process_snippet_event(event_data)
+                self.events_processed.inc()
+                for gitlab_object in gitlab_objects:
+                    self.push_event_to_queue(event_type, gitlab_object, stream_name="retrieval")
+                return
             else:
                 logging.info(f"{self.__class__.__name__}: event {event_type} received")
                 return
@@ -105,6 +114,40 @@ class GitlabRetrievalProcessor(EventProcessor):
             logging.info(
                 f'{self.__class__.__name__}: GitLab API error retrieving group ID {event_data["group_id"]}: {e}'
             )
+
+    def _process_snippet_event(self, event_data):
+        # Retrieve all snippets, and filter out non-verified snippets
+        try:
+            # Retrieve all public snippets
+            public_snippets = self.gitlab_client.snippets.public()
+        except gitlab.exceptions.GitlabGetError as e:
+            logging.info(f"{self.__class__.__name__}: GitLab API error retrieving snippets: {e}")
+            return []
+
+        non_verified_snippets = []
+        for snippet in public_snippets:
+            if not self._is_snippet_author_verified(snippet):
+                non_verified_snippets.append(snippet)
+                logging.debug(f"Added snippet {snippet.id} to non_verified_snippets")
+            else:
+                logging.debug(f"Author of snippet {snippet.id} is verified")
+
+        return non_verified_snippets
+
+    def _is_snippet_author_verified(self, snippet):
+        # Check if the author of the snippet is verified.
+        try:
+            author = self.gitlab_client.users.get(snippet.author['id'])
+            response = requests.post("http://localhost:8001/verify_email", json={'email': author.email}, timeout=10)
+            response_data = json.loads(response.text)
+        except Exception as e:
+            logging.error(f"Error in verifying author: {e}")
+            return False
+        
+        if response_data.get('domain_verified', False) and response_data.get('user_verified', False):
+            return False
+        else: 
+            return True
 
     def push_event_to_queue(self, event_type, data, stream_name=None):
         serialized_data = data.to_json()

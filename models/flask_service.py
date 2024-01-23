@@ -53,6 +53,15 @@ class IsNullTransformer(BaseEstimator, TransformerMixin):
         return X_copy
 
 
+class SnippetSpamClassifier(Resource):
+    def post(self):
+        data = request.get_json(force=True)
+
+        return jsonify(
+            {"prediction": "1", "score": 0.5}
+        )
+
+
 class UserSpamClassifier(Resource):
     def post(self):
         data = request.get_json(force=True)
@@ -121,6 +130,7 @@ class UserSpamClassifier(Resource):
 
 
 api.add_resource(UserSpamClassifier, "/predict_user_create", "/predict_user_rename")
+api.add_resource(SnippetSpamClassifier, "/predict_snippet_check")
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=True)

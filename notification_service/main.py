@@ -9,6 +9,7 @@ from common.constants import (
     IssueEvent,
     IssueNoteEvent,
     GroupEvent,
+    SnippetEvent,
 )
 
 from common.event_processor import EventProcessor
@@ -296,6 +297,34 @@ def format_message(event_type, data):
             message_format["blocks"][0]["text"][
                 "text"
             ] = "Project Ownership Transferred on GitLab"
+    
+    elif event_type in [e.value for e in SnippetEvent]:
+        message_format = {
+            "blocks": [
+                {"type": "header", "text": {"type": "plain_text", "text": "Snippet Checked"}},
+                {
+                    "type": "section",
+                    "fields": [
+                        {"type": "mrkdwn", "text": f"*Title:*\n{event_data['title']}"},
+                        {
+                            "type": "mrkdwn",
+                            "text": f"*Description:*\n{event_data['description']}",
+                        },
+                        {
+                            "type": "mrkdwn",
+                            "text": f"*Author:*\n{event_data['author']['name']}",
+                        },
+                    ],
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"*Link:*\n<{event_data['web_url']}|View Snippet>",
+                    },
+                },
+            ]
+        }
 
     return message_format
 
