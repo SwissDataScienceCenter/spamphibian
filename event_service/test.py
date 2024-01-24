@@ -74,8 +74,6 @@ class TestEventService(unittest.TestCase):
 
                             print("Deleting message %s from output queue", message[0])
                             self.redis_mock.xtrim('event', maxlen=0)
-                
-                print
 
 
 if __name__ == "__main__":
