@@ -12,6 +12,7 @@ from common.constants import (
     IssueEvent,
 )
 from event_service.main import create_app
+import itertools
 
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -28,19 +29,7 @@ class TestEventService(unittest.TestCase):
         json_data = {}
         test_cases = []
 
-        all_event_types = [
-            e.value for e in UserEvent
-        ] + [
-            e.value for e in ProjectEvent
-        ] + [
-            e.value for e in GroupEvent
-        ] + [
-            e.value for e in IssueEvent
-        ] + [
-            e.value for e in IssueNoteEvent
-        ] + [
-            e.value for e in SnippetEvent
-        ]
+        all_event_types = map(lambda e: e.value, itertools.chain(UserEvent,ProjectEvent,GroupEvent,IssueEvent,IssueNoteEvent,SnippetEvent))
 
         for event_type in all_event_types:
             with open(f"test/json_data/{event_type}.json", "r") as file:
