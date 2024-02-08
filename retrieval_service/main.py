@@ -143,10 +143,10 @@ class GitlabRetrievalProcessor(EventProcessor):
         except Exception as e:
             logging.error(f"Error in verifying author: {e}")
             return False
-        
-        if response_data.get('domain_verified', False) and response_data.get('user_verified', False):
+
+        if response_data.get('domain_verified', False) is False and response_data.get('user_verified', False) is False:
             return False
-        else: 
+        else:
             return True
 
     def push_event_to_queue(self, event_type, data, stream_name=None):
