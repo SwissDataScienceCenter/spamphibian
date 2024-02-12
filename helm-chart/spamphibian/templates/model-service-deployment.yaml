@@ -1,0 +1,26 @@
+{{- if .Values.global.modelService.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "spamphibian.fullname" . }}-model
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "spamphibian.name" . }}-model
+  template:
+    metadata:
+      labels:
+        app: {{ include "spamphibian.name" . }}-model
+    spec:
+      {{ if .Values.global.modelService.enabled }}
+      imagePullSecrets:
+      - name: {{ .Values.global.modelService.imagePullSecrets.name }}
+      {{ end }}
+      containers:
+      - name: model
+        image: {{ .Values.global.modelService.image }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.global.modelService.webhook.port }}
+{{- end }}

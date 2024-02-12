@@ -1,0 +1,119 @@
+# Default values for spamphibian.
+# This is a YAML-formatted file.
+
+replicaCount: 1
+
+image:
+  repository: spamphibian
+  pullPolicy: Never
+  tag: ""
+
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 8000
+
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+global:
+  logLevel: "INFO"
+
+  gitlab:
+    url: "https://gitlab.com"
+    accessToken: "glpat-1234567890"
+
+  slack:
+    webhookURL: "https://hooks.slack.com/services/123456789/123456789"
+
+  modelService:
+    enabled: true
+    image: "spamphibian-model:0.0.1"
+    webhook:
+      hostname: "http://spamphibian-model"
+      port: 5001
+    imagePullSecrets:
+      enabled: true
+      name: my-registry-creds
+      dockerConfigJson: "<base64 encoded ~/.docker/config.json>"
+
+  redis:
+    db: 0
+    password: ""
+    usePasswordSecret: false
+    passwordSecretName: ""
+    passwordSecretKey: ""
+
+    # Flag to toggle between standalone and sentinel
+    useSentinel: false
+
+    # Regular Redis Configuration
+    standalone:
+      host: "spamphibian-redis"
+      port: 6379
+
+    # Sentinel Configuration
+    sentinel:
+      masterSet: "gitlab-redis-node-0.gitlab-redis-headless.gitlab.svc.cluster.local"
+      hosts:
+      - host: gitlab-redis-node-0.gitlab-redis-headless.gitlab.svc.cluster.local
+        port: 26379
+      - host: gitlab-redis-node-1.gitlab-redis-headless.gitlab.svc.cluster.local
+        port: 26379
+      - host: gitlab-redis-node-2.gitlab-redis-headless.gitlab.svc.cluster.local
+        port: 26379
+
+  verifiedDomains:
+  - "\\.ac\\."    # Academic institutions
+  - "\\.gov$"     # Government institutions
+  - "\\.edu$"     # Educational institutions
+
+  verifiedUsers:
+  - "verified-user@non-verified-domain.com"
+
+  metrics:
+    enabled: true
