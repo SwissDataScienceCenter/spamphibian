@@ -103,17 +103,7 @@ class GitlabRetrievalProcessor(EventProcessor):
 
     def _process_issue_event(self, event_data):
         project = self._retry_with_exponential_backoff(self.gitlab_client.projects.get, event_data["object_attributes"]["project_id"])
-        if type(project) is None:
-            logging.warning(f'Project {event_data["object_attributes"]["project_id"]} not found.')
-            return
-        try:
-            issue = project.issues.get(event_data["object_attributes"]["id"])
-            return issue
-        except Exception as e:
-            logging.info(
-                f'{self.__class__.__name__}: GitLab API error retrieving issue ID {event_data["object_attributes"]["id"]}: {e}'
-            )
-            raise
+        return project.issues.get(event_data["object_attributes"]["id"])
 
     def _process_issue_note_event(self, event_data):
         project = self._retry_with_exponential_backoff(self.gitlab_client.projects.get(event_data["project_id"]))
@@ -153,11 +143,13 @@ class GitlabRetrievalProcessor(EventProcessor):
             return True
 
     def push_event_to_queue(self, event_type, data, stream_name=None):
-        # TODO: Explain why we are using to_json() instead of json.dumps() and separate implementation of the method
-        serialized_data = data.to_json()
+        # We use a custom push_event_to_queue function in this class instead of
+        # EventProcessor's implementation so that we can use GitLab's .to_json()
+        # function to serialise the data, instead of json.dumps()
+        serialised_data = data.to_json()
 
         try:
-            self.redis_client.xadd(stream_name, {event_type: serialized_data})
+            self.redis_client.xadd(stream_name, {event_type: serialised_data})
             logging.debug(f"{self.__class__.__name__}: added data to {stream_name}")
         except Exception as e:
             logging.error(f"Error adding data to queue {stream_name}: {e}")
