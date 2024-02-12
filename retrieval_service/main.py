@@ -4,6 +4,7 @@ import os
 from prometheus_client import Counter, Histogram
 import requests
 import json
+import time
 
 from common.constants import (
     UserEvent,
@@ -42,87 +43,89 @@ class GitlabRetrievalProcessor(EventProcessor):
             "Total number of events processed",
         )
 
+    def _retry_with_exponential_backoff(self, func, *args, max_attempts=5, initial_delay=1, max_delay=32, **kwargs):
+        attempt = 0
+        delay = initial_delay
+        while attempt < max_attempts:
+            try:
+                return func(*args, **kwargs)
+            except (gitlab.exceptions.GitlabGetError, gitlab.exceptions.GitlabHttpError) as e:
+                logging.warning(f'Error retrieving from GitLab with function {func.__name__}: {e}')
+                if e.response_code == 404:
+                    logging.warning(f'Object not found in GitLab.')
+                    raise
+                else:
+                    logging.warning(f'Retry {attempt + 1} of {max_attempts} for function {func.__name__} failed with error: {e}')
+                    attempt += 1
+                    if attempt == max_attempts:
+                        raise
+                    time.sleep(delay)
+                    delay = min(delay * 2, max_delay)
+
     def process_event(self, event_type, event_data):
         with self.event_processing_time.time():
 
-            # Determine how to retrieve data based on event type
-            if event_type in [e.value for e in UserEvent]:
-                gitlab_object = self._process_user_event(event_data)
-            elif event_type in [e.value for e in ProjectEvent]:
-                gitlab_object = self._process_project_event(event_data)
-            elif event_type in [e.value for e in IssueEvent]:
-                gitlab_object = self._process_issue_event(event_data)
-            elif event_type in [e.value for e in IssueNoteEvent]:
-                gitlab_object = self._process_issue_note_event(event_data)
-            elif event_type in [e.value for e in GroupEvent]:
-                gitlab_object = self._process_group_event(event_data)
-            elif event_type in [e.value for e in SnippetEvent]:
-                gitlab_objects = self._process_snippet_event(event_data)
-                self.events_processed.inc()
-                for gitlab_object in gitlab_objects:
-                    self.push_event_to_queue(event_type, gitlab_object, stream_name="retrieval")
-                return
-            else:
-                logging.info(f"{self.__class__.__name__}: event {event_type} received")
-                return
+            try:
+                # Determine how to retrieve data based on event type
+                if event_type in [e.value for e in UserEvent]:
+                    gitlab_object = self._process_user_event(event_data)
+                elif event_type in [e.value for e in ProjectEvent]:
+                    gitlab_object = self._process_project_event(event_data)
+                elif event_type in [e.value for e in IssueEvent]:
+                    gitlab_object = self._process_issue_event(event_data)
+                elif event_type in [e.value for e in IssueNoteEvent]:
+                    gitlab_object = self._process_issue_note_event(event_data)
+                elif event_type in [e.value for e in GroupEvent]:
+                    gitlab_object = self._process_group_event(event_data)
+                elif event_type in [e.value for e in SnippetEvent]:
+                    gitlab_objects = self._process_snippet_event(event_data)
+                    self.events_processed.inc()
+                    for gitlab_object in gitlab_objects:
+                        self.push_event_to_queue(event_type, gitlab_object, stream_name="retrieval")
+                    return
+                else:
+                    logging.info(f"{self.__class__.__name__}: event {event_type} received")
+                    return
 
-            if gitlab_object:
-                self.events_processed.inc()
-                self.push_event_to_queue(event_type, gitlab_object, stream_name="retrieval")
+                if gitlab_object:
+                    self.events_processed.inc()
+                    self.push_event_to_queue(event_type, gitlab_object, stream_name="retrieval")
+            
+            except Exception as e:
+                logging.warning(f'Unable to retrieve object. Error: {e}')
+                return
 
     def _process_user_event(self, event_data):
-        try:
-            return self.gitlab_client.users.get(event_data["user_id"])
-        except gitlab.exceptions.GitlabGetError as e:
-            logging.info(
-                f'{self.__class__.__name__}: GitLab API error retrieving user ID {event_data["user_id"]}: {e}'
-            )
+        return self._retry_with_exponential_backoff(self.gitlab_client.users.get, event_data["user_id"])
 
     def _process_project_event(self, event_data):
-        try:
-            return self.gitlab_client.projects.get(event_data["project_id"])
-        except gitlab.exceptions.GitlabGetError as e:
-            logging.info(
-                f'{self.__class__.__name__}: GitLab API error retrieving project ID {event_data["project_id"]}: {e}'
-            )
+        return self._retry_with_exponential_backoff(self.gitlab_client.projects.get, event_data["project_id"])
 
     def _process_issue_event(self, event_data):
+        project = self._retry_with_exponential_backoff(self.gitlab_client.projects.get, event_data["object_attributes"]["project_id"])
+        if type(project) is None:
+            logging.warning(f'Project {event_data["object_attributes"]["project_id"]} not found.')
+            return
         try:
-            project = self.gitlab_client.projects.get(
-                event_data["object_attributes"]["project_id"]
-            )
-            return project.issues.get(event_data["object_attributes"]["id"])
-        except gitlab.exceptions.GitlabGetError as e:
+            issue = project.issues.get(event_data["object_attributes"]["id"])
+            return issue
+        except Exception as e:
             logging.info(
                 f'{self.__class__.__name__}: GitLab API error retrieving issue ID {event_data["object_attributes"]["id"]}: {e}'
             )
+            raise
 
     def _process_issue_note_event(self, event_data):
-        try:
-            project = self.gitlab_client.projects.get(event_data["project_id"])
-            issue = project.issues.get(event_data["issue"]["id"])
-            return issue.notes.get(event_data["object_attributes"]["id"])
-        except gitlab.exceptions.GitlabGetError as e:
-            logging.info(
-                f'{self.__class__.__name__}: GitLab API error retrieving issue note ID {event_data["object_attributes"]["id"]}: {e}'
-            )
+        project = self._retry_with_exponential_backoff(self.gitlab_client.projects.get(event_data["project_id"]))
+        issue = self._retry_with_exponential_backoff(project.issues.get(event_data["issue"]["id"]))
+        return self._retry_with_exponential_backoff(issue.notes.get(event_data["object_attributes"]["id"]))
 
     def _process_group_event(self, event_data):
-        try:
-            return self.gitlab_client.groups.get(event_data["group_id"])
-        except gitlab.exceptions.GitlabGetError as e:
-            logging.info(
-                f'{self.__class__.__name__}: GitLab API error retrieving group ID {event_data["group_id"]}: {e}'
-            )
+        return self._retry_with_exponential_backoff(self.gitlab_client.groups.get(event_data["group_id"]))
 
     def _process_snippet_event(self, event_data):
         # Retrieve all snippets, and filter out non-verified snippets
-        try:
-            # Retrieve all public snippets
-            public_snippets = self.gitlab_client.snippets.public()
-        except gitlab.exceptions.GitlabGetError as e:
-            logging.info(f"{self.__class__.__name__}: GitLab API error retrieving snippets: {e}")
-            return []
+        public_snippets = self._retry_with_exponential_backoff(lambda: self.gitlab_client.snippets.public())
 
         non_verified_snippets = []
         for snippet in public_snippets:
@@ -137,11 +140,11 @@ class GitlabRetrievalProcessor(EventProcessor):
     def _is_snippet_author_verified(self, snippet):
         # Check if the author of the snippet is verified.
         try:
-            author = self.gitlab_client.users.get(snippet.author['id'])
+            author = self._retry_with_exponential_backoff(self.gitlab_client.users.get, snippet.author['id'])
             response = requests.post("http://localhost:8001/verify_email", json={'email': author.email}, timeout=10)
             response_data = json.loads(response.text)
         except Exception as e:
-            logging.error(f"Error in verifying author: {e}")
+            logging.error(f"Error verifying author: {e}")
             return False
 
         if response_data.get('domain_verified', False) is False and response_data.get('user_verified', False) is False:
@@ -150,6 +153,7 @@ class GitlabRetrievalProcessor(EventProcessor):
             return True
 
     def push_event_to_queue(self, event_type, data, stream_name=None):
+        # TODO: Explain why we are using to_json() instead of json.dumps() and separate implementation of the method
         serialized_data = data.to_json()
 
         try:

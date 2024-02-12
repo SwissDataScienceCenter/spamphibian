@@ -23,15 +23,16 @@ class TestEventProcessor(unittest.TestCase):
 
         while True:
             messages = self.redis_conn.xread({self.event_processor.output_stream_name: '0'}, block=10000, count=1)
-            if messages:
-                for message in messages[0][1]:
-                    message_id = message[0]
-                    for key in message[1].keys():
-                        popped_data = json.loads(message[1][key].decode('utf-8'))
+            if not messages:
+                continue
+            for message in messages[0][1]:
+                message_id = message[0]
+                for key in message[1].keys():
+                    popped_data = json.loads(message[1][key].decode('utf-8'))
 
-                        self.redis_conn.xdel(self.event_processor.output_stream_name, message_id)
+                    self.redis_conn.xdel(self.event_processor.output_stream_name, message_id)
 
-                        self.assertEqual(popped_data, event_data)
+                    self.assertEqual(popped_data, event_data)
 
                 return
 

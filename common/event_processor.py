@@ -95,25 +95,28 @@ class EventProcessor:
             )
 
     def poll_and_process_event(self, testing=False):
+    # TODO: Send heartbeat to Prometheus
         while True:
             messages = self.redis_client.xread({self.input_stream_name: '0'}, block=10000, count=1)
-            if messages:
-                for message in messages[0][1]:
-                    message_id = message[0]
-                    for key in message[1].keys():
-                        decoded_key = key.decode('utf-8')
-                        logging.debug(
-                            f"{self.__class__.__name__}: processing event {decoded_key}"
-                        )
-                        data = json.loads(message[1][key].decode('utf-8'))
+            if not messages:
+                continue
 
-                        print(f"Processing message {message_id} from {self.input_stream_name}")
+            for message in messages[0][1]:
+                message_id = message[0]
+                for key in message[1].keys():
+                    decoded_key = key.decode('utf-8')
+                    logging.debug(
+                        f"{self.__class__.__name__}: processing event {decoded_key}"
+                    )
+                    data = json.loads(message[1][key].decode('utf-8'))
 
-                        self.process_event(decoded_key, data)
+                    print(f"Processing message {message_id} from {self.input_stream_name}")
 
-                        # Delete the message from the stream after processing
-                        self.redis_client.xdel(self.input_stream_name, message_id)
-                        print(f"Deleted message {message_id} from {self.input_stream_name}")
+                    self.process_event(decoded_key, data)
+
+                    # Delete the message from the stream after processing
+                    self.redis_client.xdel(self.input_stream_name, message_id)
+                    print(f"Deleted message {message_id} from {self.input_stream_name}")
 
                 if testing:
                     return
