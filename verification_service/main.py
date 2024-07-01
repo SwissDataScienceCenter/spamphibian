@@ -238,14 +238,18 @@ class VerificationEventProcessor(EventProcessor):
                 user_email_address, self.verified_domains_file
             )
 
+            logging.info(
+                f"User: {user_email_address}, user domain verification: {user_verified}"
+            )
+
             if not user_verified:
                 user_verified = check_user_verification(
                     user_email_address, self.verified_users_file
                 )
 
-            logging.info(
-                f"{user_email_address}, domain verification: {user_verified}"
-            )
+                logging.info(
+                    f"User: {user_email_address}, user verification: {user_verified}"
+                )
 
         # Check if the event type is snippet_check.
         elif event_type == SnippetEvent.SNIPPET_CHECK.value:
