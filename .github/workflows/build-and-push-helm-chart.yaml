@@ -22,8 +22,3 @@ jobs:
         env:
           DOCKER_USERNAME: ${{ secrets.RENKU_DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.RENKU_DOCKER_PASSWORD }}
-      - name: Update component version
-        uses: SwissDataScienceCenter/renku-actions/update-component-version@v1.11.3
-        env:
-          COMPONENT_NAME: spamphibian
-          GITHUB_TOKEN: ${{ secrets.RENKUBOT_GITHUB_TOKEN }}
