@@ -17,6 +17,9 @@ jobs:
         id: branch-names
         with:
           strip_tag_prefix: 'helm-'
+      - name: Checking tag value
+        run: |
+          echo "Tag value: ${{ steps.branch-names.outputs.tag }}"
       - name: Push chart and images
         uses: SwissDataScienceCenter/renku-actions/publish-chart@v1.11.3
         env:
