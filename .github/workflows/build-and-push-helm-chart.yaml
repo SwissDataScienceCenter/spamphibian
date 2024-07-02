@@ -2,8 +2,7 @@ name: Build & push Helm chart
 
 on:
   push:
-    tags:
-      - "helm-*"
+    tags: ["*"]
 
 jobs:
   helm-chart:
@@ -13,13 +12,9 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
-      - uses: tj-actions/branch-names@v8.0.1
-        id: branch-names
-        with:
-          strip_tag_prefix: 'helm-'
-      - name: Checking tag value
-        run: |
-          echo "Tag value: ${{ steps.branch-names.outputs.tag }}"
+      - name: Set version
+        id: vars
+        run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
       - name: Push chart and images
         uses: SwissDataScienceCenter/renku-actions/publish-chart@v1.11.3
         env:
