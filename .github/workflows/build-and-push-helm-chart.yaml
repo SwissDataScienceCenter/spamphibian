@@ -13,15 +13,10 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
-      - name: set up environment variables
-        run: |
-          echo "GIT_USER=Renku Bot" >> $GITHUB_ENV
-          echo "GIT_EMAIL=renku@datascience.ch" >> $GITHUB_ENV
-      - name: Set version
-        id: vars
-        run: |
-          TAG_NAME="${GITHUB_REF#refs/tags/helm-}"
-          echo "tag=$TAG_NAME" >> $GITHUB_ENV
+      - uses: tj-actions/branch-names@v8.0.1
+        id: branch-names
+        with:
+          strip_tag_prefix: 'helm-'
       - name: Push chart and images
         uses: SwissDataScienceCenter/renku-actions/publish-chart@v1.11.3
         env:
