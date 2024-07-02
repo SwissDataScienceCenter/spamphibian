@@ -7,3 +7,7 @@ charts:
       published: https://swissdatasciencecenter.github.io/helm-charts
     paths:
       - helm-chart
+    images:
+      spamphibian:
+        contextPath: .
+        dockerfilePath: Dockerfile
