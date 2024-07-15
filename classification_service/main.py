@@ -59,6 +59,7 @@ class GitlabUserSpamClassifier(EventProcessor):
 
         url = f"{self.model_url}/predict_{event_type}"
 
+        response = None
         with self.request_latency.time():
             try:
                 response = requests.post(
@@ -70,6 +71,10 @@ class GitlabUserSpamClassifier(EventProcessor):
             except requests.Timeout:
                 print("The request timed out")
 
+        if response is None:
+            self.failed_requests.inc()
+            logging.critical("Model did not respond")
+            exit(1)
 
         if response.status_code != 200:
             self.failed_requests.inc()
