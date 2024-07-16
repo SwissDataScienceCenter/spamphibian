@@ -3,7 +3,6 @@ import json
 import logging
 import os
 
-
 # EventProcessor class is used to process events from Redis streams
 # and add events back into to Redis streams after processing.
 class EventProcessor:
@@ -68,11 +67,15 @@ class EventProcessor:
 
                 sentinel = redis.Sentinel(
                     [sentinel_hosts[0]],
+                    socket_timeout=0.1,
                     sentinel_kwargs=sentinel_kwargs,
                 )
 
                 self.redis_client = sentinel.master_for(
-                    REDIS_MASTER_SET, **master_for_kwargs
+                    REDIS_MASTER_SET, 
+                    **master_for_kwargs,
+                    retry_on_timeout=True,
+                    health_check_interval=60,
                 )
 
                 logging.info(
@@ -92,6 +95,9 @@ class EventProcessor:
                 port=REDIS_PORT,
                 db=REDIS_DB,
                 password=REDIS_PASSWORD,
+                retry_on_error=[redis.exceptions.ConnectionError, redis.exceptions.TimeoutError, redis.exceptions.BusyLoadingError],
+                retry=redis.retry.Retry(redis.backoff.ExponentialBackoff(), -1),
+                health_check_interval=60,
             )
 
     def poll_and_process_event(self, testing=False):
@@ -131,4 +137,4 @@ class EventProcessor:
             self.redis_client.xadd(self.output_stream_name, {event_type: serialized_data})
             logging.debug(f"{self.__class__.__name__}: added data to {self.output_stream_name}")
         except Exception as e:
-            logging.error(f"Error adding data to stream {self.output_stream_name}: {e}")
+            logging.critical(f"Error adding data to stream {self.output_stream_name}: {e}")

@@ -66,7 +66,7 @@ class GitlabUserSpamClassifier(EventProcessor):
                     url,
                     data=data_json,
                     headers={"Content-Type": "application/json"},
-                    timeout=10
+                    timeout=20
                 )
             except requests.Timeout:
                 print("The request timed out")
