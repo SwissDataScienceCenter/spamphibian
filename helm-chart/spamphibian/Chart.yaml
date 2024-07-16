@@ -2,5 +2,5 @@ apiVersion: v2
 name: spamphibian
 description: A Helm chart for Kubernetes
 type: application
-version: 0.0.1
-appVersion: "0.0.1-alpha19"
+version: 0.0.1-set.by.chartpress
+appVersion: "1.0"
