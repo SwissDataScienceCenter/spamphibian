@@ -137,3 +137,4 @@ class EventProcessor:
             logging.debug(f"{self.__class__.__name__}: added data to {self.output_stream_name}")
         except Exception as e:
             logging.critical(f"Error adding data to stream {self.output_stream_name}: {e}")
+            exit(1)
