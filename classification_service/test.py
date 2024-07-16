@@ -33,7 +33,7 @@ class TestGitlabUserSpamClassifier(unittest.TestCase):
             expected_url,
             data=expected_data,
             headers={"Content-Type": "application/json"},
-            timeout=10,
+            timeout=20,
         )
 
         messages = redis_conn.xread({"retrieval": '0'}, block=1000, count=1)
