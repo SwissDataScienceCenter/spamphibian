@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: spamphibian
-        image: renku/spamphibian:{{ .Chart.AppVersion }}
+        image: renku/spamphibian:{{ .Chart.Version }}
         env:
         - name: GITLAB_URL
           value: {{ .Values.global.gitlab.url }}
