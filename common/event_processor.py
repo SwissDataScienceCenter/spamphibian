@@ -67,7 +67,6 @@ class EventProcessor:
 
                 sentinel = redis.Sentinel(
                     [sentinel_hosts[0]],
-                    socket_timeout=0.1,
                     sentinel_kwargs=sentinel_kwargs,
                 )
 
