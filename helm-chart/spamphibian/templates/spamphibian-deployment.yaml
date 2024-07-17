@@ -77,6 +77,14 @@ spec:
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
+        livenessProbe:
+          exec:
+            command:
+            - /app/check_services_health.sh
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
       volumes:
       - name: verified-domains-config
         configMap:
