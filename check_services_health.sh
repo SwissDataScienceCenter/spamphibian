@@ -11,5 +11,29 @@ for service in $SERVICES; do
 
 done
 
+check_health() {
+    python3 - <<END
+import http.client
+import sys
+
+conn = http.client.HTTPConnection("localhost", 8001)
+try:
+    conn.request("GET", "/health")
+    response = conn.getresponse()
+    if response.status != 200:
+        print(f"Health check failed (HTTP {response.status})")
+        sys.exit(1)
+except Exception as e:
+    print(f"Health check failed: {str(e)}")
+    sys.exit(1)
+sys.exit(0)
+END
+}
+
+if ! check_health ; then
+    echo "verification_service flask health check failed"
+    exit 1
+fi
+
 echo "All services are running"
 exit 0

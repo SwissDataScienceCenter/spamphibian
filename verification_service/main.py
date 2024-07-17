@@ -89,6 +89,9 @@ def verify_email():
         }
     )
 
+@app.route('/health')
+def health_check():
+    return jsonify({"status": "healthy"}), 200
 
 def check_domain_verification(email, verified_domains_file):
     try:
