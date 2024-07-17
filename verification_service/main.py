@@ -301,7 +301,7 @@ def process_events(
 
 
 def main():
-    Thread(target=app.run, kwargs={"port": 8001}).start()
+    #Thread(target=app.run, kwargs={"port": 8001}).start()
 
     process_events(
         verified_users_file="verification_service/verified_users.yaml",
