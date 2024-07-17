@@ -5,7 +5,9 @@ import requests
 import yaml
 from prometheus_client import multiprocess, CollectorRegistry, Counter
 from flask import Flask, request, jsonify
-from threading import Thread
+from threading import Thread, Event
+import signal
+import sys
 
 from common.event_processor import EventProcessor
 
@@ -56,6 +58,7 @@ snippet_check_events_total = Counter(
 # This is used to verify individual snippets that first need to be
 # retrieved from GitLab by the retrieval service.
 app = Flask(__name__)
+shutdown_event = Event()
 
 CONTENT_TYPE_LATEST = str("text/plain; version=0.0.4; charset=utf-8")
 
@@ -299,17 +302,43 @@ def process_events(
 
     processor.poll_and_process_event(testing=testing)
 
+def signal_handler(signum, frame):
+    print("Received shutdown signal")
+    shutdown_event.set()
+
+def flask_run(app, port):
+    try:
+        app.run(port=port)
+    except Exception as e:
+        print(f"Flask error: {e}")
+        shutdown_event.set()
+
+def process_events_wrapper(*args, **kwargs):
+    try:
+        process_events(*args, **kwargs)
+    except Exception as e:
+        print(f"process_events error: {e}")
+        shutdown_event.set()
 
 def main():
-    #Thread(target=app.run, kwargs={"port": 8001}).start()
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
 
-    process_events(
-        verified_users_file="verification_service/verified_users.yaml",
-        verified_domains_file="verification_service/verified_domains.yaml",
-        gitlab_url=os.getenv("GITLAB_URL"),
-        gitlab_access_token=os.environ.get("GITLAB_ACCESS_TOKEN"),
-    )
+    flask_thread = Thread(target=flask_run, args=(app, 8001), daemon=True)
+    flask_thread.start()
 
+    process_events_thread = Thread(target=process_events_wrapper,
+                                   kwargs={
+                                       "verified_users_file": "verification_service/verified_users.yaml",
+                                       "verified_domains_file": "verification_service/verified_domains.yaml",
+                                       "gitlab_url": os.getenv("GITLAB_URL"),
+                                       "gitlab_access_token": os.environ.get("GITLAB_ACCESS_TOKEN"),
+                                   })
+    process_events_thread.start()
+
+    shutdown_event.wait()
+    print("Shutting down...")
+    sys.exit(0)
 
 if __name__ == "__main__":
     main()
