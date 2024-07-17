@@ -303,12 +303,15 @@ def process_events(
 def main():
     #Thread(target=app.run, kwargs={"port": 8001}).start()
 
-    process_events(
-        verified_users_file="verification_service/verified_users.yaml",
-        verified_domains_file="verification_service/verified_domains.yaml",
-        gitlab_url=os.getenv("GITLAB_URL"),
-        gitlab_access_token=os.environ.get("GITLAB_ACCESS_TOKEN"),
-    )
+    try:
+        process_events(
+            verified_users_file="verification_service/verified_users.yaml",
+            verified_domains_file="verification_service/verified_domains.yaml",
+            gitlab_url=os.getenv("GITLAB_URL"),
+            gitlab_access_token=os.environ.get("GITLAB_ACCESS_TOKEN"),
+        )
+    except Exception as e:
+        logging.error("Error processing events: %s", e)
 
 
 if __name__ == "__main__":
