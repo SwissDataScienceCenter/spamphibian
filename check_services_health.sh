@@ -30,10 +30,10 @@ sys.exit(0)
 END
 }
 
-#if ! check_health ; then
-#    echo "verification_service flask health check failed"
-#    exit 1
-#fi
+if ! check_health ; then
+   echo "verification_service flask health check failed"
+   exit 1
+fi
 
 echo "All services are running"
 exit 0

@@ -69,7 +69,11 @@ class GitlabUserSpamClassifier(EventProcessor):
                     timeout=20
                 )
             except requests.Timeout:
-                print("The request timed out")
+                logging.error(
+                    {
+                        "Classification service:": "Request to model service timed out",
+                    }
+                )
 
         if response is None:
             self.failed_requests.inc()
