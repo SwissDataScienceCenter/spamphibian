@@ -1,7 +1,10 @@
 import json
 import logging
-import requests
 import os
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+from contextlib import contextmanager
 
 from common.event_processor import EventProcessor
 
@@ -61,42 +64,27 @@ class GitlabUserSpamClassifier(EventProcessor):
 
         response = None
         with self.request_latency.time():
-            try:
-                response = requests.post(
+            with self.retry() as session:
+                response = session.post(
                     url,
-                    data=data_json,
-                    headers={"Content-Type": "application/json"},
-                    timeout=20
+                    json=data_json,
                 )
-            except requests.Timeout:
-                logging.error(
-                    {
-                        "Classification service:": "Request to model service timed out",
-                    }
-                )
-
-        if response is None:
-            self.failed_requests.inc()
-            logging.critical("Model did not respond")
-            exit(1)
 
         if response.status_code != 200:
             self.failed_requests.inc()
-            logging.error(
+            logging.critical(
                 f"Model returned code {response.status_code}",
                 f"Response: {response.text}"
             )
+            exit(1)
 
-            prediction = "N/A"
-            score = "0.0"
-        else:
-            self.successful_requests.inc()
+        self.successful_requests.inc()
 
-            prediction = response.json()["prediction"]
+        prediction = response.json()["prediction"]
 
-            score = round(response.json()["score"], 3)
+        score = round(response.json()["score"], 3)
 
-            self.score_histogram.observe(score)
+        self.score_histogram.observe(score)
 
         results = {
             "event_data": data,
@@ -116,6 +104,28 @@ class GitlabUserSpamClassifier(EventProcessor):
         self.push_event_to_queue(event_type, results)
 
         self.event_types.labels(type=event_type).inc()
+
+    @contextmanager
+    def retry(self, total_requests=5, backoff_factor=1, statuses=(500, 502, 503, 504, 429)):
+
+        session = requests.Session()
+
+        retries = Retry(total=total_requests, backoff_factor=backoff_factor, status_forcelist=list(statuses), allowed_methods=["GET", "POST"])
+
+        session.mount("http://", HTTPAdapter(max_retries=retries))
+        session.mount("https://", HTTPAdapter(max_retries=retries))
+
+        try:
+            yield session
+        except requests.RequestException as e:
+            self.failed_requests.inc()
+            logging.critical(
+                {
+                    "Classification service:": "Request to model service timed out too many times",
+                    "error": e,
+                }
+            )
+            exit(1)
 
     def run(self, testing=False):
         self.poll_and_process_event(testing=testing)
