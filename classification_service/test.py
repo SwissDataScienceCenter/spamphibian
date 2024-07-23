@@ -7,8 +7,8 @@ from common.constants import UserEvent
 
 
 class TestGitlabUserSpamClassifier(unittest.TestCase):
-    @patch("classification_service.main.requests.post", autospec=True)
-    def test_run_with_data_in_queue(self, mock_requests_post):
+    @patch("classification_service.main.GitlabUserSpamClassifier.retry", autospec=True)
+    def test_run_with_data_in_queue(self, mock_retry):
         redis_conn = fakeredis.FakeRedis()
 
         redis_conn.xadd(
@@ -16,10 +16,14 @@ class TestGitlabUserSpamClassifier(unittest.TestCase):
             {UserEvent.USER_CREATE.value: json.dumps({"username": "test_user", "some_data": "data"})},
         )
 
+        mock_session = MagicMock()
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"prediction": 1, "score": 0.9}
-        mock_requests_post.return_value = mock_response
+        mock_session.post.return_value = mock_response
+
+        # Configure the retry context manager to use the mock session
+        mock_retry.return_value.__enter__.return_value = mock_session
 
         classifier = GitlabUserSpamClassifier(
             redis_conn=redis_conn, model_url="http://test-model-url"
@@ -29,11 +33,10 @@ class TestGitlabUserSpamClassifier(unittest.TestCase):
         expected_url = "http://test-model-url/predict_user_create"
         expected_data = json.dumps({"username": "test_user", "some_data": "data"})
 
-        mock_requests_post.assert_called_once_with(
+        mock_session.post.assert_called_once_with(
             expected_url,
             data=expected_data,
             headers={"Content-Type": "application/json"},
-            timeout=20,
         )
 
         messages = redis_conn.xread({"retrieval": '0'}, block=1000, count=1)

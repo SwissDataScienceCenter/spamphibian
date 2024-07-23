@@ -67,7 +67,8 @@ class GitlabUserSpamClassifier(EventProcessor):
             with self.retry() as session:
                 response = session.post(
                     url,
-                    json=data_json,
+                    data=data_json,
+                    headers={"Content-Type": "application/json"},
                 )
 
         if response.status_code != 200:
