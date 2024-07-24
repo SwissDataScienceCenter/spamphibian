@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "spamphibian.fullname" . }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "spamphibian.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "spamphibian.name" . }}
+      {{- if .Values.global.metrics.enabled }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+      {{- end }}
+    spec:
+      containers:
+      - name: spamphibian
+        image: renku/spamphibian:{{ .Chart.Version }}
+        env:
+        - name: GITLAB_URL
+          value: {{ .Values.global.gitlab.url }}
+        - name: GITLAB_ACCESS_TOKEN
+          value: {{ .Values.global.gitlab.accessToken }}
+        - name: SLACK_WEBHOOK_URL
+          value: {{ .Values.global.slack.webhookURL }}
+        - name: MODEL_URL
+          value: "{{ .Values.global.modelService.webhook.hostname }}:{{ .Values.global.modelService.webhook.port }}"
+        - name: REDIS_HOST
+          value: {{ .Values.global.redis.standalone.host }}
+        - name: REDIS_PORT
+          value: "{{ .Values.global.redis.standalone.port }}"
+        - name: REDIS_DB
+          value: "{{ .Values.global.redis.db }}"
+        - name: REDIS_PASSWORD
+          {{- if .Values.global.redis.usePasswordSecret }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.redis.passwordSecretName }}
+              key: {{ .Values.global.redis.passwordSecretKey }}
+          {{- else }}
+          value: "{{ .Values.global.redis.password }}"
+          {{- end }}
+        - name: PYTHONPATH
+          value: /app
+        - name: prometheus_multiproc_dir
+          value: prometheus_multiproc_dir
+        - name: REDIS_SENTINEL_HOSTS
+          value: "{{- range $index, $element := .Values.global.redis.sentinel.hosts -}}{{- if ne $index 0 }},{{ end }}{{- printf "%s:%d" $element.host (int $element.port) }}{{- end }}"
+        - name: REDIS_SENTINEL_ENABLED
+          {{- if .Values.global.redis.useSentinel }}
+          value: "True"
+          {{- else }}
+          value: "False"
+          {{- end }}
+        - name: REDIS_MASTER_SET
+          value: "{{ .Values.global.redis.sentinel.masterSet }}"
+        ports:
+        - name: http
+          containerPort: 8000
+        volumeMounts:
+        - name: verified-domains-config
+          mountPath: /app/verification_service/verified_domains.yaml
+          subPath: verified_domains.yaml
+        - name: verified-users-config
+          mountPath: /app/verification_service/verified_users.yaml
+          subPath: verified_users.yaml
+        readinessProbe:
+          exec:
+            command:
+            - /app/check_services_health.sh
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        livenessProbe:
+          exec:
+            command:
+            - /app/check_services_health.sh
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+      volumes:
+      - name: verified-domains-config
+        configMap:
+          name: {{ include "spamphibian.fullname" . }}-verified-domains-config
+      - name: verified-users-config
+        configMap:
+          name: {{ include "spamphibian.fullname" . }}-verified-users-config

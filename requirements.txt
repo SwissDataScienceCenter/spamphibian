@@ -1,0 +1,13 @@
+Flask
+Flask-RESTful
+Sanic
+redis
+prometheus-client
+python-gitlab
+prometheus-flask-exporter
+Werkzeug
+pyyaml
+responses
+sanic-testing
+fakeredis
+pytest
